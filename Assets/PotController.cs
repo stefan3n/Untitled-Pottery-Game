@@ -70,8 +70,10 @@ public sealed class PotController : MonoBehaviour
 				return;
 			}
 			
-			float localY = hit.point.y - pottery.transform.position.y;
-			int hoveredRing = 0;
+			Vector3 localHitPoint = pottery.transform.InverseTransformPoint(hit.point);
+			float localY = localHitPoint.y;
+
+            int hoveredRing = 0;
 			
 			for (int i = 0; i < pottery.ringsCount; i++)
 			{
@@ -126,8 +128,14 @@ public sealed class PotController : MonoBehaviour
 			
 		selector.SetActive(true);
 		
-		float selectorY = selectedRing * pottery.ringHeight;
-		selector.transform.position = pottery.transform.position + new Vector3(0, selectorY + pottery.ringHeight * 0.5f, 0);
+		float localSelectorY = selectedRing * pottery.ringHeight + pottery.ringHeight * 0.5f;
+		
+		Vector3 localPosition = new Vector3(0, localSelectorY, 0);
+		Vector3 worldPosition = pottery.transform.TransformPoint(localPosition);
+		
+		selector.transform.position = worldPosition;
+		selector.transform.rotation = pottery.transform.rotation;
+		
 		selector.transform.localScale = new Vector3(
 			pottery.ringsRadius[selectedRing] * 2.5f, 
 			pottery.ringHeight * 0.5f, 

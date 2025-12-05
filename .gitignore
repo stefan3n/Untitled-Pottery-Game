@@ -37,7 +37,7 @@ crashlytics-build.properties
 [Ll]ogs/
 [Mm]emoryCaptures/
 [Uu]ser[Ss]ettings/   # ignore your local Unity editor settings
-
+UserSettings/
 # Asset store tools
 [Aa]sset[Ss]tore/
 

@@ -3,170 +3,126 @@ using UnityEngine.InputSystem;
 
 public sealed class PotController : MonoBehaviour
 {
-	[Header("VR Controller")]
-	[SerializeField]
-	private Transform controllerTransform;
-	
-	[SerializeField]
-	private InputActionProperty triggerAction;
-	
-	[SerializeField]
-	private float maxInteractionDistance = 2f;
-	
-	[Header("Pottery")]
-	[SerializeField]
-	private Potter pottery;
-	
-	[SerializeField]
-	private GameObject selector;
-	
-	[Header("Visual Feedback")]
-	[SerializeField]
-	private Color hoverColor = new Color(0f, 1f, 1f, 0.3f);
-	
-	[SerializeField]
-	private Color activeColor = new Color(0f, 1f, 0f, 0.5f);
-	
-	private Ray ray;
-	private RaycastHit hit;
-	private bool isEditing;
-	private int selectedRing;
-	private Vector3 previousHitPoint;
-	private bool wasTriggerPressed;
-	private Renderer selectorRenderer;
-	private LayerMask raycastMask;
+    [Header("VR Controller")]
+    [SerializeField] private Transform controllerTransform;
 
-	void Start()
-	{
-		if (selector != null)
-		{
-			selector.SetActive(false);
-			selectorRenderer = selector.GetComponent<Renderer>();
-			
-			selector.layer = LayerMask.NameToLayer("Ignore Raycast");
-			foreach (Transform child in selector.GetComponentsInChildren<Transform>())
-			{
-				child.gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
-			}
-		}
-		
-		raycastMask = ~LayerMask.GetMask("Ignore Raycast");
-	}
+    [SerializeField] private InputActionProperty triggerAction;
+    [SerializeField] private Potter pottery;
+    [SerializeField] private float sculptSpeed = 2f;
+    
+    [Header("Selector (ring highlight)")]
+    [SerializeField] private GameObject selector;
+    [SerializeField] private Color hoverColor = new Color(0f, 1f, 1f, 0.3f);
+    [SerializeField] private Color activeColor = new Color(0f, 1f, 0f, 0.5f);
+    
+    private bool triggerPressed;
+    private int selectedRing;
+    private Renderer selectorRenderer;
+    
+    private void Start()
+    {
+        if (selector != null)
+        {
+            selector.SetActive(false);
+            selectorRenderer = selector.GetComponent<Renderer>();
+        }
+    }
 
-	void Update()
-	{
-		float triggerValue = triggerAction.action?.ReadValue<float>() ?? 0f;
-		bool triggerPressed = triggerValue > 0.5f;
-		
-		ray = new Ray(controllerTransform.position, controllerTransform.forward);
-		
-		if (Physics.Raycast(ray, out hit, maxInteractionDistance, raycastMask))
-		{
-			if (hit.collider.gameObject != pottery.gameObject)
-			{
-				HideSelector();
-				isEditing = false;
-				wasTriggerPressed = triggerPressed;
-				return;
-			}
-			
-			Vector3 localHitPoint = pottery.transform.InverseTransformPoint(hit.point);
-			float localY = localHitPoint.y;
+    
+    private void Update()
+    {
+        float triggerValue = triggerAction.action?.ReadValue<float>() ?? 0f;
+        triggerPressed = triggerValue > 0.5f;
+    }
 
-            int hoveredRing = 0;
-			
-			for (int i = 0; i < pottery.ringsCount; i++)
-			{
-				float ringY = i * pottery.ringHeight;
-				float nextRingY = (i + 1) * pottery.ringHeight;
-				
-				if (localY >= ringY && localY < nextRingY)
-				{
-					hoveredRing = i;
-					break;
-				}
-			}
-			
-			selectedRing = hoveredRing;
-			ShowSelector(triggerPressed);
-			
-			if (triggerPressed && !wasTriggerPressed)
-			{
-				isEditing = true;
-				previousHitPoint = hit.point;
-			}
-			else if (!triggerPressed && wasTriggerPressed)
-			{
-				isEditing = false;
-			}
-			
-			if (isEditing && triggerPressed)
-			{
-				Vector3 controllerRight = controllerTransform.right;
-				Vector3 movement = hit.point - previousHitPoint;
-				float delta = Vector3.Dot(movement, controllerRight);
-				
-				pottery.ringsRadius[selectedRing] += delta * 2f;
-				pottery.ringsRadius[selectedRing] = Mathf.Clamp(pottery.ringsRadius[selectedRing], 0.1f, 2f);
-				
-				previousHitPoint = hit.point;
-			}
-		}
-		else
-		{
-			HideSelector();
-			isEditing = false;
-		}
-		
-		wasTriggerPressed = triggerPressed;
-	}
-	
-	void ShowSelector(bool isActive)
-	{
-		if (selector == null)
-			return;
-			
-		selector.SetActive(true);
-		
-		float localSelectorY = selectedRing * pottery.ringHeight + pottery.ringHeight * 0.5f;
-		
-		Vector3 localPosition = new Vector3(0, localSelectorY, 0);
-		Vector3 worldPosition = pottery.transform.TransformPoint(localPosition);
-		
-		selector.transform.position = worldPosition;
-		selector.transform.rotation = pottery.transform.rotation;
-		
-		selector.transform.localScale = new Vector3(
-			pottery.ringsRadius[selectedRing] * 2.5f, 
-			pottery.ringHeight * 0.5f, 
-			pottery.ringsRadius[selectedRing] * 2.5f
-		);
-		
-		if (selectorRenderer != null && selectorRenderer.material != null)
-		{
-			Color targetColor = isActive ? activeColor : hoverColor;
-			selectorRenderer.material.color = targetColor;
-		}
-	}
-	
-	void HideSelector()
-	{
-		if (selector != null)
-			selector.SetActive(false);
-	}
+    private void OnTriggerStay(Collider other)
+    {
+    if (other.gameObject != pottery.gameObject) return;
 
-	void OnDrawGizmos()
-	{
-		if (controllerTransform == null)
-			return;
-			
-		Gizmos.color = Color.blue;
-		Gizmos.DrawRay(ray.origin, ray.direction * maxInteractionDistance);
+    Vector3 worldPoint = controllerTransform.position;
+    Vector3 localPoint = pottery.transform.InverseTransformPoint(worldPoint);
 
-		if (isEditing)
-		{
-			Gizmos.color = Color.green;
-			Gizmos.DrawSphere(hit.point, 0.02f);
-		}
-	}
+    int ringIndex = GetRingIndexFromLocalY(localPoint.y);
+    if (ringIndex < 0 || ringIndex >= pottery.ringsCount)
+    {
+        HideSelector();
+        return;
+    }
+    
+    selectedRing = ringIndex;
+    
+    ShowSelector(triggerPressed);
+    
+    if (!triggerPressed)
+            return;
+
+    float currentRadius = pottery.ringsRadius[ringIndex];
+    Vector2 localXZ = new Vector2(localPoint.x, localPoint.z);
+    float contactRadius = localXZ.magnitude;
+
+    bool touchingFromOutside = contactRadius >= currentRadius;
+
+    float direction = touchingFromOutside ? -1f : 1f;
+
+    float newRadius = currentRadius + direction * sculptSpeed * Time.deltaTime;
+
+    pottery.ringsRadius[ringIndex] = newRadius;
+    }
+    
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject != pottery.gameObject)
+            return;
+
+        HideSelector();
+    }
+
+    private int GetRingIndexFromLocalY(float localY)
+    {
+        for (int i = 0; i < pottery.ringsCount; i++)
+        {
+            float ringY = i * pottery.ringHeight;
+            float nextRingY = (i + 1) * pottery.ringHeight;
+            if (localY >= ringY && localY < nextRingY)
+                return i;
+        }
+        if (localY < 0f) return 0;
+        if (localY > pottery.ringsCount * pottery.ringHeight) return pottery.ringsCount - 1;
+        return -1;
+    }
+    
+    private void ShowSelector(bool isActive)
+    {
+        if (selector == null || pottery == null)
+            return;
+
+        selector.SetActive(true);
+
+        // Position selector around the selected ring, like in your raycast version
+        float localSelectorY = selectedRing * pottery.ringHeight + pottery.ringHeight * 0.5f;
+        Vector3 localPosition = new Vector3(0, localSelectorY, 0);
+        Vector3 worldPosition = pottery.transform.TransformPoint(localPosition);
+
+        selector.transform.position = worldPosition;
+        selector.transform.rotation = pottery.transform.rotation;
+
+        // Scale based on ring radius
+        float radius = pottery.ringsRadius[selectedRing];
+        selector.transform.localScale = new Vector3(
+            radius * 2.5f,
+            pottery.ringHeight * 0.5f,
+            radius * 2.5f
+        );
+
+        if (selectorRenderer != null && selectorRenderer.material != null)
+        {
+            selectorRenderer.material.color = isActive ? activeColor : hoverColor;
+        }
+    }
+
+    private void HideSelector()
+    {
+        if (selector != null)
+            selector.SetActive(false);
+    }
 }

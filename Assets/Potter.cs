@@ -2,6 +2,7 @@
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
+[RequireComponent(typeof(MeshCollider))] 
 public sealed class Potter : MonoBehaviour
 {
     public int faces = 16;
@@ -17,8 +18,13 @@ public sealed class Potter : MonoBehaviour
     [Tooltip("Flip U for inside to avoid mirrored look")]
     public bool flipUInside = false;
 
+    [Header("Radius Limits")]
+    public float minRingRadius = 0.15f;
+    public float maxRingRadius = 1.0f;
+
     Mesh mesh;
     Body body;
+    MeshCollider meshCollider;   
 
     void Awake()
     {
@@ -34,6 +40,9 @@ public sealed class Potter : MonoBehaviour
 
         var mf = GetComponent<MeshFilter>();
         mf.sharedMesh = mesh;
+
+        meshCollider = GetComponent<MeshCollider>();
+        meshCollider.sharedMesh = mesh;   // use the same procedural mesh for collisions
 
         var mr = GetComponent<MeshRenderer>();
         if (insideMaterial == null)
@@ -59,6 +68,10 @@ public sealed class Potter : MonoBehaviour
 
     void Update()
     {
+	for (int i = 0; i < ringsRadius.Length; i++)
+	{
+	    ringsRadius[i] = Mathf.Clamp(ringsRadius[i], minRingRadius, maxRingRadius);
+	}
         body.UpdateVertices();
 
         int facesN = body.vertices.GetLength(0);
@@ -158,6 +171,13 @@ public sealed class Potter : MonoBehaviour
             mesh.SetTriangles(insideTris, 1);
         }
         mesh.RecalculateBounds();
+        
+        if (meshCollider != null)
+        {
+            meshCollider.sharedMesh = null;
+            meshCollider.sharedMesh = mesh;
+        }
+
     }
 
 #if UNITY_EDITOR

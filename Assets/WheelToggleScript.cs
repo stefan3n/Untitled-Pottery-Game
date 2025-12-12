@@ -22,17 +22,21 @@ public class WheelToggleScript : MonoBehaviour
 
     private void OnEnable()
     {
-        interactable.selectEntered.AddListener(OnSelectEntered);
+        interactable.hoverEntered.AddListener(a => Debug.Log("[WheelToggle] hover entered"));
+        interactable.hoverExited.AddListener(a => Debug.Log("[WheelToggle] hover exited"));
+        interactable.selectEntered.AddListener(a => Debug.Log("[WheelToggle] select entered"));
+        interactable.selectExited.AddListener(a => Debug.Log("[WheelToggle] select exited"));
+        interactable.activated.AddListener(OnActivated);
     }
 
     private void OnDisable()
     {
-        interactable.selectEntered.RemoveListener(OnSelectEntered);
+        interactable.activated.RemoveListener(OnActivated);
     }
 
-    private void OnSelectEntered(SelectEnterEventArgs args)
+    private void OnActivated(ActivateEventArgs args)
     {
-        Debug.Log("[WheelToggleScript] selectEntered fired!");
+        Debug.Log("[WheelToggleScript] activated fired!");
 
         if (wheel != null)
         {

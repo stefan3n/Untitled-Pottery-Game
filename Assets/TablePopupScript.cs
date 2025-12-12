@@ -9,8 +9,8 @@ public class TablePopupScript : MonoBehaviour
     [SerializeField] private GameObject popupRoot;
 
     [Header("Optional")]
-    [Tooltip("Automatically hide popup when the object is selected (clicked).")]
-    [SerializeField] private bool hideOnSelect = false;
+    [Tooltip("Automatically hide popup when the object is activated (trigger).")]
+    [SerializeField] private bool hideOnActivate = false;
 
     private XRBaseInteractable interactable;
 
@@ -26,36 +26,31 @@ public class TablePopupScript : MonoBehaviour
     {
         interactable.hoverEntered.AddListener(OnHoverEntered);
         interactable.hoverExited.AddListener(OnHoverExited);
-        interactable.selectEntered.AddListener(OnSelectEntered);
+        // interactable.activated.AddListener(OnActivated);
     }
 
     private void OnDisable()
     {
         interactable.hoverEntered.RemoveListener(OnHoverEntered);
         interactable.hoverExited.RemoveListener(OnHoverExited);
-        interactable.selectEntered.RemoveListener(OnSelectEntered);
+        // interactable.activated.RemoveListener(OnActivated);
     }
 
     private void OnHoverEntered(HoverEnterEventArgs args)
     {
         if (popupRoot != null)
-        {
             popupRoot.SetActive(true);
-        }
     }
 
     private void OnHoverExited(HoverExitEventArgs args)
     {
-    	if (popupRoot != null)
-        {
+        if (popupRoot != null)
             popupRoot.SetActive(false);
-        }
     }
 
-    private void OnSelectEntered(SelectEnterEventArgs args)
+    private void OnActivated(ActivateEventArgs args)
     {
-        if (hideOnSelect && popupRoot != null)
+        if (hideOnActivate && popupRoot != null)
             popupRoot.SetActive(false);
     }
-
 }

@@ -2,20 +2,24 @@
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
-[RequireComponent(typeof(MeshCollider))] 
+[RequireComponent(typeof(MeshCollider))]
 public sealed class Potter : MonoBehaviour
 {
     public int faces = 16;
     public float ringHeight = 0.1f;
     public int ringsCount = 16;
+
     public float[] ringsRadius = new float[] { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
 
-    [Header("Materials (leave Inside Material null to use a single material)")]
+    [Header("State")]
+    public bool isStatic = false;
+    private float[] defaultRadii;
+
+    [Header("Materials")]
     public Material outsideMaterial;
-    public Material insideMaterial; 
+    public Material insideMaterial;
 
     [Header("UV options")]
-    [Tooltip("Flip U for inside to avoid mirrored look")]
     public bool flipUInside = false;
 
     [Header("Radius Limits")]
@@ -24,17 +28,22 @@ public sealed class Potter : MonoBehaviour
 
     Mesh mesh;
     Body body;
-    MeshCollider meshCollider;   
+    MeshCollider meshCollider;
 
     void Awake()
     {
         if (ringsRadius == null || ringsRadius.Length != ringsCount)
         {
-            Debug.LogError("ringsRadius array must have exactly ringsCount elements!");
+            UnityEngine.Debug.LogError("ringsRadius array must have exactly ringsCount elements!");
             return;
         }
 
+        // Salvez starea initiala
+        defaultRadii = (float[])ringsRadius.Clone();
+
+        // Body primeste referinta la ringsRadius
         body = new Body(faces, ringsCount, ringHeight, ringsRadius);
+
         mesh = new Mesh { name = "Pot" };
         mesh.MarkDynamic();
 
@@ -42,36 +51,69 @@ public sealed class Potter : MonoBehaviour
         mf.sharedMesh = mesh;
 
         meshCollider = GetComponent<MeshCollider>();
-        meshCollider.sharedMesh = mesh;   // use the same procedural mesh for collisions
+        meshCollider.sharedMesh = mesh;
 
+        SetupMaterials();
+    }
+
+    private void SetupMaterials()
+    {
         var mr = GetComponent<MeshRenderer>();
-        if (insideMaterial == null)
+        // Daca sunt materiale setate din Inspector, le folosim, altfel Standard
+        if (mr.sharedMaterials.Length == 0)
         {
-            if (mr.sharedMaterial == null)
+            if (insideMaterial != null)
             {
-                mr.material = new Material(Shader.Find("Standard"));
+                if (mr.sharedMaterial == null) mr.material = new Material(Shader.Find("Standard"));
+                else mr.material = mr.sharedMaterial;
             }
             else
             {
-                mr.material = mr.sharedMaterial;
+                if (outsideMaterial == null) outsideMaterial = new Material(Shader.Find("Standard"));
+                mr.materials = new[] { outsideMaterial, insideMaterial };
             }
-        }
-        else
-        {
-            if (outsideMaterial == null)
-            {
-                outsideMaterial = new Material(Shader.Find("Standard"));
-            }
-            mr.materials = new[] { outsideMaterial, insideMaterial };
         }
     }
 
     void Update()
     {
-	for (int i = 0; i < ringsRadius.Length; i++)
-	{
-	    ringsRadius[i] = Mathf.Clamp(ringsRadius[i], minRingRadius, maxRingRadius);
-	}
+        if (isStatic) return;
+
+        for (int i = 0; i < ringsRadius.Length; i++)
+        {
+            ringsRadius[i] = Mathf.Clamp(ringsRadius[i], minRingRadius, maxRingRadius);
+        }
+
+        GenerateMesh();
+    }
+
+    public float[] GetRadiiData()
+    {
+        return (float[])ringsRadius.Clone();
+    }
+
+    public void SetRadiiData(float[] newData)
+    {
+        if (newData.Length != ringsCount) return;
+
+        System.Array.Copy(newData, ringsRadius, ringsCount);
+
+        GenerateMesh();
+    }
+
+    public void ResetPot()
+    {
+        if (defaultRadii != null)
+        {
+            System.Array.Copy(defaultRadii, ringsRadius, ringsCount);
+            GenerateMesh();
+        }
+    }
+
+    public void GenerateMesh()
+    {
+        if (body == null) return;
+
         body.UpdateVertices();
 
         int facesN = body.vertices.GetLength(0);
@@ -79,7 +121,7 @@ public sealed class Potter : MonoBehaviour
         int vCount = facesN * ringsN;
 
         Vector3[] posOut = body.VerticesToPositionArray();
-        Vector3[] nrmOut = body.VerticesToNormalsArray();
+        Vector3[] nrmOut = body.VerticesToNormalsArray(); 
 
         Vector3[] vertices = new Vector3[vCount * 2];
         Vector3[] normals = new Vector3[vCount * 2];
@@ -97,23 +139,29 @@ public sealed class Potter : MonoBehaviour
             }
         }
 
+        // Outside
         for (int i = 0; i < vCount; i++)
         {
             vertices[i] = posOut[i];
-            normals[i] = nrmOut[i];    
+            normals[i] = nrmOut[i];
             uvs[i] = uvOut[i];
         }
 
+        //Inside
         int offset = vCount;
         for (int i = 0; i < vCount; i++)
         {
-            vertices[offset + i] = posOut[i];   
-            normals[offset + i] = -nrmOut[i]; 
+            vertices[offset + i] = posOut[i];
+            normals[offset + i] = -nrmOut[i];
 
             if (flipUInside)
+            {
                 uvs[offset + i] = new Vector2(1f - uvOut[i].x, uvOut[i].y);
+            }
             else
+            {
                 uvs[offset + i] = uvOut[i];
+            }
         }
 
         mesh.vertices = vertices;
@@ -122,7 +170,7 @@ public sealed class Potter : MonoBehaviour
 
         int triPerQuad = 6;
         int quadCount = (facesN - 1) * (ringsN - 1);
-        int triCount = triPerQuad * quadCount;
+        int triCount = quadCount * triPerQuad;
 
         int[] outsideTris = new int[triCount];
         int t = 0;
@@ -170,29 +218,23 @@ public sealed class Potter : MonoBehaviour
             mesh.SetTriangles(outsideTris, 0);
             mesh.SetTriangles(insideTris, 1);
         }
+
         mesh.RecalculateBounds();
-        
+
         if (meshCollider != null)
         {
             meshCollider.sharedMesh = null;
             meshCollider.sharedMesh = mesh;
         }
-
     }
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
-        if (mesh == null || body == null)
-            return;
-
+        if (mesh == null || body == null) return;
         Gizmos.matrix = transform.localToWorldMatrix;
         Gizmos.color = Color.red;
         Gizmos.DrawWireMesh(mesh);
-        Gizmos.color = Color.cyan;
-
-        foreach (Vertex vertex in body.vertices)
-            Gizmos.DrawSphere(vertex.position, 0.015f);
     }
 #endif
 }

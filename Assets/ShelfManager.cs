@@ -8,7 +8,7 @@ public class ShelfManager : MonoBehaviour
 
     [Header("Appearance")]
     [Range(0.1f, 2.0f)]
-    public float savedPotScale = 0.5f;
+    public float savedPotScale = 0.2f;
 
     private bool[] isSlotOccupied;
 

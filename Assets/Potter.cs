@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿﻿using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -6,25 +6,29 @@
 public sealed class Potter : MonoBehaviour
 {
     public int faces = 16;
-    public float ringHeight = 0.1f;
-    public int ringsCount = 16;
 
-    public float[] ringsRadius = new float[] { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+    [Header("Vertical layout")]
+    public float baseRingHeight = 0.2f;
+    public int ringsCount = 3;
+
+    public float[] ringsRadius = new float[] { 0.3f, 0.3f, 0.3f };
+
+    public float maxPotHeight = 1.2f;  
+
+    [HideInInspector]
+    public float[] ringHeights;
 
     [Header("State")]
     public bool isStatic = false;
-    private float[] defaultRadii;
-
-    [Header("Materials")]
-    public Material outsideMaterial;
-    public Material insideMaterial;
+    private float[] defaultRadius;
+    private float[] defaultRingHeights;
 
     [Header("UV options")]
     public bool flipUInside = false;
 
     [Header("Radius Limits")]
     public float minRingRadius = 0.15f;
-    public float maxRingRadius = 1.0f;
+    public float maxRingRadius = 0.9f;
 
     Mesh mesh;
     Body body;
@@ -32,17 +36,23 @@ public sealed class Potter : MonoBehaviour
 
     void Awake()
     {
+        EnsureArraySizes();
+
         if (ringsRadius == null || ringsRadius.Length != ringsCount)
         {
             UnityEngine.Debug.LogError("ringsRadius array must have exactly ringsCount elements!");
             return;
         }
+        if (ringHeights == null || ringHeights.Length != ringsCount)
+        {
+            UnityEngine.Debug.LogError("ringHeights array must have exactly ringsCount elements!");
+            return;
+        }
 
-        // Salvez starea initiala
-        defaultRadii = (float[])ringsRadius.Clone();
+        defaultRadius = (float[])ringsRadius.Clone();
+        defaultRingHeights = (float[])ringHeights.Clone();
 
-        // Body primeste referinta la ringsRadius
-        body = new Body(faces, ringsCount, ringHeight, ringsRadius);
+        body = new Body(faces, ringsCount, ringHeights, ringsRadius);
 
         mesh = new Mesh { name = "Pot" };
         mesh.MarkDynamic();
@@ -50,28 +60,31 @@ public sealed class Potter : MonoBehaviour
         var mf = GetComponent<MeshFilter>();
         mf.sharedMesh = mesh;
 
-        meshCollider = GetComponent<MeshCollider>();
-        meshCollider.sharedMesh = mesh;
+        var mc = GetComponent<MeshCollider>();
+        mc.sharedMesh = mesh;
 
-        SetupMaterials();
+        var mr = GetComponent<MeshRenderer>();
+        mr.materials = new [] {mr.sharedMaterial, mr.sharedMaterial};
     }
 
-    private void SetupMaterials()
+    private void EnsureArraySizes()
     {
-        var mr = GetComponent<MeshRenderer>();
-        // Daca sunt materiale setate din Inspector, le folosim, altfel Standard
-        if (mr.sharedMaterials.Length == 0)
+        if (ringsCount < 2) ringsCount = 2;
+
+        if (ringsRadius == null || ringsRadius.Length != ringsCount)
         {
-            if (insideMaterial != null)
-            {
-                if (mr.sharedMaterial == null) mr.material = new Material(Shader.Find("Standard"));
-                else mr.material = mr.sharedMaterial;
-            }
-            else
-            {
-                if (outsideMaterial == null) outsideMaterial = new Material(Shader.Find("Standard"));
-                mr.materials = new[] { outsideMaterial, insideMaterial };
-            }
+            float defaultRadius = 0.5f;
+            var newR = new float[ringsCount];
+            for (int i = 0; i < ringsCount; i++)
+                newR[i] = (ringsRadius != null && i < ringsRadius.Length) ? ringsRadius[i] : defaultRadius;
+            ringsRadius = newR;
+        }
+
+        if (ringHeights == null || ringHeights.Length != ringsCount)
+        {
+            ringHeights = new float[ringsCount];
+            for (int i = 0; i < ringsCount; i++)
+                ringHeights[i] = i * baseRingHeight;
         }
     }
 
@@ -95,17 +108,19 @@ public sealed class Potter : MonoBehaviour
     public void SetRadiiData(float[] newData)
     {
         if (newData.Length != ringsCount) return;
-
         System.Array.Copy(newData, ringsRadius, ringsCount);
-
         GenerateMesh();
     }
 
     public void ResetPot()
     {
-        if (defaultRadii != null)
+        if (defaultRadius != null && defaultRingHeights != null)
         {
-            System.Array.Copy(defaultRadii, ringsRadius, ringsCount);
+            ringsCount = defaultRadius.Length;
+            ringsRadius = (float[])defaultRadius.Clone();
+            ringHeights = (float[])defaultRingHeights.Clone();
+
+            body = new Body(faces, ringsCount, ringHeights, ringsRadius);
             GenerateMesh();
         }
     }
@@ -113,6 +128,11 @@ public sealed class Potter : MonoBehaviour
     public void GenerateMesh()
     {
         if (body == null) return;
+
+        if (body.vertices.GetLength(1) != ringsCount)
+        {
+            body = new Body(faces, ringsCount, ringHeights, ringsRadius);
+        }
 
         body.UpdateVertices();
 
@@ -139,7 +159,6 @@ public sealed class Potter : MonoBehaviour
             }
         }
 
-        // Outside
         for (int i = 0; i < vCount; i++)
         {
             vertices[i] = posOut[i];
@@ -147,7 +166,6 @@ public sealed class Potter : MonoBehaviour
             uvs[i] = uvOut[i];
         }
 
-        //Inside
         int offset = vCount;
         for (int i = 0; i < vCount; i++)
         {
@@ -204,21 +222,10 @@ public sealed class Potter : MonoBehaviour
             }
         }
 
-        if (insideMaterial == null)
-        {
-            int[] allTris = new int[outsideTris.Length + insideTris.Length];
-            System.Array.Copy(outsideTris, 0, allTris, 0, outsideTris.Length);
-            System.Array.Copy(insideTris, 0, allTris, outsideTris.Length, insideTris.Length);
-            mesh.subMeshCount = 1;
-            mesh.triangles = allTris;
-        }
-        else
-        {
-            mesh.subMeshCount = 2;
-            mesh.SetTriangles(outsideTris, 0);
-            mesh.SetTriangles(insideTris, 1);
-        }
-
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(outsideTris, 0);
+        mesh.SetTriangles(insideTris, 1);
+    
         mesh.RecalculateBounds();
 
         if (meshCollider != null)
@@ -226,6 +233,57 @@ public sealed class Potter : MonoBehaviour
             meshCollider.sharedMesh = null;
             meshCollider.sharedMesh = mesh;
         }
+    }
+
+    public float GetTotalHeight()
+    {
+        if (ringHeights == null || ringHeights.Length == 0)
+            return 0f;
+
+        return ringHeights[ringHeights.Length - 1] - ringHeights[0];
+    }
+
+    public void InsertRingBetween(int lowerIndex, int upperIndex)
+    {
+        if (lowerIndex < 0 || upperIndex >= ringsCount || upperIndex != lowerIndex + 1) return;
+
+        int newCount = ringsCount + 1;
+
+        float newHeight = 0.5f * (ringHeights[lowerIndex] + ringHeights[upperIndex]);
+        float newRadius = 0.5f * (ringsRadius[lowerIndex] + ringsRadius[upperIndex]);
+
+        var newRadii = new float[newCount];
+        var newHeights = new float[newCount];
+
+        int write = 0;
+        for (int i = 0; i < ringsCount; i++)
+        {
+            newRadii[write] = ringsRadius[i];
+            newHeights[write] = ringHeights[i];
+            write++;
+
+            if (i == lowerIndex)
+            {
+                newRadii[write] = newRadius;
+                newHeights[write] = newHeight;
+                write++;
+            }
+        }
+
+        ringsCount = newCount;
+        ringsRadius = newRadii;
+        ringHeights = newHeights;
+
+        body = new Body(faces, ringsCount, ringHeights, ringsRadius);
+        GenerateMesh();
+    }
+
+    public void SetRingHeight(int ringIndex, float newHeight)
+    {
+        if (ringIndex < 0 || ringIndex >= ringsCount) return;
+
+        ringHeights[ringIndex] = newHeight;
+        GenerateMesh();
     }
 
 #if UNITY_EDITOR

@@ -4,17 +4,24 @@ using UnityEngine.InputSystem;
 
 public sealed class PotController : MonoBehaviour
 {
-    [Header("VR Controller")]
-    [SerializeField] private Transform controllerTransform;
+    [Header("VR Controllers")]
+    [SerializeField] private Transform leftControllerTransform;
+    [SerializeField] private Transform rightControllerTransform;
 
-    [SerializeField] private InputActionProperty triggerAction; // Sculpt
-    [SerializeField] private Potter pottery; // Vasul principal de pe masa
-    [SerializeField] private float sculptSpeed = 2f;
+    [SerializeField] private InputActionProperty triggerAction; 
+    [SerializeField] private Potter pottery;
+    [SerializeField] private float sculptSpeed = 0.25f;
+
+    [Header("Pull Settings")]
+    [SerializeField] private float pullHeightSpeed = 0.2f; 
+    [SerializeField] private float splitThreshold = 0.6f; 
 
     [Header("Selector (ring highlight)")]
     [SerializeField] private GameObject selector;
     [SerializeField] private Color hoverColor = new Color(0f, 1f, 1f, 0.3f);
     [SerializeField] private Color activeColor = new Color(0f, 1f, 0f, 0.5f);
+    [SerializeField] private float baseSelectorHeight = 0.1f;
+    [SerializeField] private float selectorRadiusTolerance = 0.15f; 
 
     [Header("Saving & Loading")]
     [SerializeField] private ShelfManager shelfManager;
@@ -22,14 +29,16 @@ public sealed class PotController : MonoBehaviour
     [SerializeField] private InputActionProperty loadAction;
 
     [Header("Game Flow")]
-    [SerializeField] private TargetManager targetManager; 
-    [SerializeField] private InputActionProperty submitAction; 
+    [SerializeField] private TargetManager targetManager;
+    [SerializeField] private InputActionProperty submitAction;
 
     private bool wasSavePressed = false;
     private bool wasLoadPressed = false;
     private bool wasSubmitPressed = false;
 
     private bool triggerPressed;
+    
+    private bool isPulling;
     private int selectedRing;
     private Renderer selectorRenderer;
 
@@ -43,8 +52,8 @@ public sealed class PotController : MonoBehaviour
             selectorRenderer = selector.GetComponent<Renderer>();
         }
 
-        if (shelfManager == null) UnityEngine.Debug.LogError("ShelfManager is missing!");
-        if (pottery == null) UnityEngine.Debug.LogError("Main Potter is missing!");
+        if (shelfManager == null) Debug.LogError("ShelfManager is missing!");
+        if (pottery == null) Debug.LogError("Main Potter is missing!");
     }
 
     private void OnEnable()
@@ -63,43 +72,162 @@ public sealed class PotController : MonoBehaviour
         HandleLoading();
         HandleSubmit();
 
+        HandleRightHandHover(); 
+        HandleRightHandSculpt();
+        HandleTwoHandPull();     
+
         if (Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
         {
             PrintRadiiToConsole();
         }
     }
 
-    // Folosim functia asta cand dorim sa cunoastem razele vasului curent
-    private void PrintRadiiToConsole()
+    private void HandleRightHandHover()
     {
-        if (pottery == null) return;
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
-        sb.Append("new float[] { ");
-
-        for (int i = 0; i < pottery.ringsRadius.Length; i++)
+        if (pottery == null || pottery.ringHeights == null || pottery.ringsCount == 0)
         {
-            // Luam raza curenta
-            float val = pottery.ringsRadius[i];
-
-            string valString = val.ToString("F2", CultureInfo.InvariantCulture);
-
-            sb.Append(valString + "f");
-
-            if (i < pottery.ringsRadius.Length - 1)
-            {
-                sb.Append(", ");
-            }
+            HideSelector();
+            return;
         }
 
-        sb.Append(" };");
+        if (rightControllerTransform == null)
+        {
+            HideSelector();
+            return;
+        }
 
-        UnityEngine.Debug.Log("--- COPY LEVEL DATA ---");
-        UnityEngine.Debug.Log(sb.ToString());
-        UnityEngine.Debug.Log("---------------------------");
+        Vector3 local = pottery.transform.InverseTransformPoint(rightControllerTransform.position);
+
+        int ringIndex = GetRingIndexFromLocalY(local.y);
+        if (ringIndex < 0 || ringIndex >= pottery.ringsCount)
+        {
+            HideSelector();
+            return;
+        }
+
+        float radiusAtRing = pottery.ringsRadius[ringIndex];
+        float handRadius = new Vector2(local.x, local.z).magnitude;
+
+        float distanceToSurface = Mathf.Abs(handRadius - radiusAtRing);
+        if (distanceToSurface > selectorRadiusTolerance)
+        {
+            HideSelector();
+            return;
+        }
+
+        selectedRing = ringIndex;
+        ShowSelector(triggerPressed);
     }
 
+
+    private void HandleRightHandSculpt()
+    {
+        if (!triggerPressed) return;
+        if (pottery == null || pottery.ringHeights == null || pottery.ringsCount == 0) return;
+        if (rightControllerTransform == null) return;
+
+        Vector3 localPoint = pottery.transform.InverseTransformPoint(rightControllerTransform.position);
+
+        int ringIndex = GetRingIndexFromLocalY(localPoint.y);
+        if (ringIndex < 0 || ringIndex >= pottery.ringsCount)
+            return;
+
+        float currentRadius = pottery.ringsRadius[ringIndex];
+        Vector2 localXZ = new Vector2(localPoint.x, localPoint.z);
+        float contactRadius = localXZ.magnitude;
+
+        float distanceToSurface = Mathf.Abs(contactRadius - currentRadius);
+        if (distanceToSurface > selectorRadiusTolerance)
+            return;
+
+        bool touchingFromOutside = contactRadius >= currentRadius;
+        float direction = touchingFromOutside ? -1f : 1f;
+
+        var speed = sculptSpeed;
+        
+        if(isPulling)
+            speed /= 2;
+
+        float newRadius = currentRadius + direction * speed * Time.deltaTime;
+        pottery.ringsRadius[ringIndex] = newRadius;
+    }
+
+    // ------------------- TWO-HAND PULL LOGIC -------------------
+
+    private void HandleTwoHandPull()
+    {
+        if (pottery == null || pottery.ringHeights == null || pottery.ringsCount < 2)
+            return;
+
+        if (!triggerPressed)
+            return;
+
+        if (leftControllerTransform == null || rightControllerTransform == null)
+            return;
+
+        float maxHandsDistance = selectorRadiusTolerance * 2f;
+        float handsDistance = Vector3.Distance(leftControllerTransform.position, rightControllerTransform.position);
+        if (handsDistance > maxHandsDistance)
+            return;
+
+        Vector3 leftLocal = pottery.transform.InverseTransformPoint(leftControllerTransform.position);
+        Vector3 rightLocal = pottery.transform.InverseTransformPoint(rightControllerTransform.position);
+
+        int leftSegment = GetRingIndexFromLocalY(leftLocal.y);
+        int rightSegment = GetRingIndexFromLocalY(rightLocal.y);
+
+        if (leftSegment < 0 || leftSegment >= pottery.ringsCount - 1) return;
+        if (rightSegment < 0 || rightSegment >= pottery.ringsCount - 1) return;
+
+        int segmentIndex = leftSegment;
+
+        float radius = pottery.ringsRadius[segmentIndex];
+
+        float leftRadius = new Vector2(leftLocal.x, leftLocal.z).magnitude;
+        float rightRadius = new Vector2(rightLocal.x, rightLocal.z).magnitude;
+
+        float leftDistanceToSurface = Mathf.Abs(leftRadius - radius);
+        float rightDistanceToSurface = Mathf.Abs(rightRadius - radius);
+
+        if (leftDistanceToSurface > selectorRadiusTolerance) return;
+        if (rightDistanceToSurface > selectorRadiusTolerance) return;
+
+        bool leftInside = leftRadius < radius;
+        bool rightOutside = rightRadius >= radius;
+
+        if (!leftInside || !rightOutside)
+            return;
+
+        float bottomY = pottery.ringHeights[segmentIndex];
+        float topY = pottery.ringHeights[segmentIndex + 1];
+        float segmentHeight = Mathf.Abs(topY - bottomY);
+
+        float deltaHeight = pullHeightSpeed * Time.deltaTime;
+
+        float currentTotalHeight = pottery.GetTotalHeight();
+        float proposedTotalHeight = currentTotalHeight + deltaHeight;
+        if (proposedTotalHeight > pottery.maxPotHeight)
+        {
+            return;
+        }
+
+        segmentHeight += deltaHeight;
+
+        float newTopY = bottomY + segmentHeight;
+        float deltaY = newTopY - topY;
+
+        for (int i = segmentIndex + 1; i < pottery.ringsCount; i++)
+        {
+            pottery.ringHeights[i] += deltaY;
+        }
+
+        if (segmentHeight > splitThreshold)
+        {
+            pottery.InsertRingBetween(segmentIndex, segmentIndex + 1);
+        }
+
+        pottery.GenerateMesh();
+    }
     private void HandleSaving()
     {
         float saveValue = saveAction.action?.ReadValue<float>() ?? 0f;
@@ -147,7 +275,7 @@ public sealed class PotController : MonoBehaviour
 
     private void LoadPotFromShelf(ShelfPot shelfPot)
     {
-        UnityEngine.Debug.Log("Loading pot from shelf...");
+        Debug.Log("Loading pot from shelf");
 
         float[] newData = shelfPot.GetData();
 
@@ -174,39 +302,6 @@ public sealed class PotController : MonoBehaviour
         }
     }
 
-    private void OnTriggerStay(Collider other)
-    {
-        if (other.GetComponent<ShelfPot>() != null) return;
-
-        if (other.gameObject != pottery.gameObject) return;
-
-        Vector3 worldPoint = controllerTransform.position;
-        Vector3 localPoint = pottery.transform.InverseTransformPoint(worldPoint);
-
-        int ringIndex = GetRingIndexFromLocalY(localPoint.y);
-        if (ringIndex < 0 || ringIndex >= pottery.ringsCount)
-        {
-            HideSelector();
-            return;
-        }
-
-        selectedRing = ringIndex;
-
-        ShowSelector(triggerPressed);
-
-        if (!triggerPressed)
-            return;
-
-        float currentRadius = pottery.ringsRadius[ringIndex];
-        Vector2 localXZ = new Vector2(localPoint.x, localPoint.z);
-        float contactRadius = localXZ.magnitude;
-
-        bool touchingFromOutside = contactRadius >= currentRadius;
-        float direction = touchingFromOutside ? -1f : 1f;
-        float newRadius = currentRadius + direction * sculptSpeed * Time.deltaTime;
-        pottery.ringsRadius[ringIndex] = newRadius;
-    }
-
     private void OnTriggerExit(Collider other)
     {
         ShelfPot hitPot = other.GetComponent<ShelfPot>();
@@ -224,38 +319,101 @@ public sealed class PotController : MonoBehaviour
 
     private int GetRingIndexFromLocalY(float localY)
     {
-        for (int i = 0; i < pottery.ringsCount; i++)
+        if (pottery == null || pottery.ringHeights == null || pottery.ringHeights.Length == 0)
+            return -1;
+
+        int count = pottery.ringsCount;
+
+        if (localY <= pottery.ringHeights[0])
+            return 0;
+
+        if (localY >= pottery.ringHeights[count - 1])
+            return count - 1;
+
+        for (int i = 0; i < count - 1; i++)
         {
-            float ringY = i * pottery.ringHeight;
-            float nextRingY = (i + 1) * pottery.ringHeight;
-            if (localY >= ringY && localY < nextRingY)
+            float ringY = pottery.ringHeights[i];
+            float nextRingY = pottery.ringHeights[i + 1];
+
+            float minY = Mathf.Min(ringY, nextRingY);
+            float maxY = Mathf.Max(ringY, nextRingY);
+
+            if (localY >= minY && localY < maxY)
                 return i;
         }
-        if (localY < 0f) return 0;
-        if (localY > pottery.ringsCount * pottery.ringHeight) return pottery.ringsCount - 1;
+
         return -1;
     }
 
     private void ShowSelector(bool isActive)
     {
-        if (selector == null || pottery == null) return;
+        if (selector == null || pottery == null || pottery.ringHeights == null)
+            return;
+
+        if (pottery.ringsCount <= 0)
+            return;
 
         selector.SetActive(true);
-        float localSelectorY = selectedRing * pottery.ringHeight + pottery.ringHeight * 0.5f;
-        Vector3 worldPosition = pottery.transform.TransformPoint(new Vector3(0, localSelectorY, 0));
 
+        int idx = Mathf.Clamp(selectedRing, 0, pottery.ringsCount - 1);
+
+        float thisY = pottery.ringHeights[idx];
+        float localSelectorY = thisY;
+
+        float segmentHeight = baseSelectorHeight;
+        if (idx < pottery.ringsCount - 1)
+        {
+            float nextY = pottery.ringHeights[idx + 1];
+            segmentHeight = Mathf.Max(baseSelectorHeight, Mathf.Abs(nextY - thisY));
+            localSelectorY = 0.5f * (thisY + nextY);
+        }
+
+        Vector3 worldPosition = pottery.transform.TransformPoint(new Vector3(0f, localSelectorY, 0f));
         selector.transform.position = worldPosition;
         selector.transform.rotation = pottery.transform.rotation;
 
-        float radius = pottery.ringsRadius[selectedRing];
-        selector.transform.localScale = new Vector3(radius * 2.5f, pottery.ringHeight * 0.5f, radius * 2.5f);
+        float radius = pottery.ringsRadius[Mathf.Clamp(idx, 0, pottery.ringsRadius.Length - 1)];
+        selector.transform.localScale = new Vector3(
+            radius * 2.5f,
+            segmentHeight * 0.5f,
+            radius * 2.5f
+        );
 
         if (selectorRenderer != null && selectorRenderer.material != null)
+        {
             selectorRenderer.material.color = isActive ? activeColor : hoverColor;
+        }
     }
 
     private void HideSelector()
     {
         if (selector != null) selector.SetActive(false);
+    }
+
+    private void PrintRadiiToConsole()
+    {
+        if (pottery == null) return;
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        sb.Append("new float[] { ");
+
+        for (int i = 0; i < pottery.ringsRadius.Length; i++)
+        {
+            float val = pottery.ringsRadius[i];
+            string valString = val.ToString("F2", CultureInfo.InvariantCulture);
+
+            sb.Append(valString + "f");
+
+            if (i < pottery.ringsRadius.Length - 1)
+            {
+                sb.Append(", ");
+            }
+        }
+
+        sb.Append(" };");
+
+        Debug.Log("Copy");
+        Debug.Log(sb.ToString());
     }
 }

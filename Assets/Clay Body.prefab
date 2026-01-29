@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 4108301009199541792}
   - component: {fileID: 7081650182283012182}
   - component: {fileID: 3988297670713747964}
+  - component: {fileID: 7890406479712515025}
   - component: {fileID: 1976639334145079715}
   - component: {fileID: 959510451534570291}
-  - component: {fileID: 7890406479712515025}
   m_Layer: 0
   m_Name: Clay Body
   m_TagString: Untagged
@@ -92,57 +92,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2051009104285173587}
   m_Mesh: {fileID: 0}
---- !u!114 &1976639334145079715
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2051009104285173587}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b4cb54e2555dddb78baa43b38ea793c0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Potter
-  faces: 16
-  ringHeight: 0.1
-  ringsCount: 16
-  ringsRadius:
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  - 0.5
-  isStatic: 0
-  outsideMaterial: {fileID: 2100000, guid: 91a8bd3552f7cd215a0971ffea504b07, type: 2}
-  insideMaterial: {fileID: 2100000, guid: 91a8bd3552f7cd215a0971ffea504b07, type: 2}
-  flipUInside: 0
-  minRingRadius: 0.15
-  maxRingRadius: 1
---- !u!114 &959510451534570291
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2051009104285173587}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f1273d30a578d9e8ba7eea5f64fdc683, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RotatePot
-  speed: 20
 --- !u!64 &7890406479712515025
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -165,6 +114,58 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!114 &1976639334145079715
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2051009104285173587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4cb54e2555dddb78baa43b38ea793c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Potter
+  faces: 16
+  baseRingHeight: 0.1
+  ringsCount: 16
+  ringsRadius:
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  - 0.5
+  ringHeights: []
+  isStatic: 0
+  outsideMaterial: {fileID: 2100000, guid: 91a8bd3552f7cd215a0971ffea504b07, type: 2}
+  insideMaterial: {fileID: 2100000, guid: 91a8bd3552f7cd215a0971ffea504b07, type: 2}
+  flipUInside: 0
+  minRingRadius: 0.15
+  maxRingRadius: 1
+--- !u!114 &959510451534570291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2051009104285173587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1273d30a578d9e8ba7eea5f64fdc683, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RotatePot
+  speed: 20
 --- !u!1 &6269705944751484478
 GameObject:
   m_ObjectHideFlags: 0

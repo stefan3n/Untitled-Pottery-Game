@@ -560,7 +560,7 @@ MonoBehaviour:
         m_CallState: 2
       - m_Target: {fileID: 1698633523}
         m_TargetAssemblyTypeName: DoorButtonController, Assembly-CSharp
-        m_MethodName: ChangeText
+        m_MethodName: DoorIsOpen
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3015,7 +3015,7 @@ RectTransform:
   m_GameObject: {fileID: 721114638}
   m_LocalRotation: {x: -0.000000029802326, y: 0.70710677, z: 0.70710677, w: 0.000000029802326}
   m_LocalPosition: {x: 0, y: 0, z: 0.00048}
-  m_LocalScale: {x: 0.00003709999, y: 0.0000371, z: 0.0000371}
+  m_LocalScale: {x: 0.00004224576, y: 0.00004224577, z: 0.00004224577}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1698633522}
@@ -3023,8 +3023,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -90, y: 90.001, z: 89.999}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -0.00152, y: -0.00134}
-  m_SizeDelta: {x: 250, y: 450}
+  m_AnchoredPosition: {x: -0.00152, y: -0.00046}
+  m_SizeDelta: {x: 250, y: 416.64}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!65 &721114640
 BoxCollider:
@@ -3045,7 +3045,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 250, y: 450, z: 1}
+  m_Size: {x: 250, y: 409.8, z: 25}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &721114641
 MonoBehaviour:
@@ -3095,10 +3095,34 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
+      - m_Target: {fileID: 1699455684}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
   m_HoverExited:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 721114638}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 1699455684}
         m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
         m_MethodName: SetActive
         m_Mode: 6
@@ -7054,7 +7078,7 @@ MonoBehaviour:
         m_CallState: 2
       - m_Target: {fileID: 104412768}
         m_TargetAssemblyTypeName: DoorButtonController, Assembly-CSharp
-        m_MethodName: ChangeText
+        m_MethodName: DoorIsOpen
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -7141,7 +7165,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: -270, y: 89.998, z: 89.998}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -0.00152, y: 0.00146}
+  m_AnchoredPosition: {x: -0.00152, y: 0.00052}
   m_SizeDelta: {x: 250, y: 450}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!65 &1699455686
@@ -7213,10 +7237,34 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
+      - m_Target: {fileID: 721114638}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
   m_HoverExited:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1699455684}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 721114638}
         m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
         m_MethodName: SetActive
         m_Mode: 6

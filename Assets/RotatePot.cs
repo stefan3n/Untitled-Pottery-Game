@@ -13,9 +13,7 @@ public sealed class RotatePot : MonoBehaviour
 			transform.Rotate(Time.deltaTime * speed * Vector3.up);
 		}
 	}
-	public void ToggleWheel()
-	    {
+	public void ToggleWheel(){
 		IsRunning = !IsRunning;
-	    }
-	    
+    }
 }

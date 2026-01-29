@@ -26,7 +26,7 @@ public sealed class Body
         vertices = new Vertex[faces, ringsCount];
     }
 
-    public void UpdateVertices()
+    public void InitializeVertices()
     {
         int i = 0;
         for (int y = 0; y < ringsCount; y++)

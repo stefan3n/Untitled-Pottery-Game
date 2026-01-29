@@ -14,7 +14,7 @@ public sealed class PotController : MonoBehaviour
 
     [Header("Pull Settings")]
     [SerializeField] private float pullHeightSpeed = 0.2f; 
-    [SerializeField] private float splitThreshold = 0.6f; 
+    [SerializeField] private float splitThreshold = 0.3f; 
 
     [Header("Selector (ring highlight)")]
     [SerializeField] private GameObject selector;
@@ -84,13 +84,13 @@ public sealed class PotController : MonoBehaviour
 
     private void HandleRightHandHover()
     {
-        if (pottery == null || pottery.ringHeights == null || pottery.ringsCount == 0)
+        if (!pottery || pottery.ringHeights == null || pottery.ringsCount == 0)
         {
             HideSelector();
             return;
         }
 
-        if (rightControllerTransform == null)
+        if (!rightControllerTransform)
         {
             HideSelector();
             return;
@@ -123,8 +123,8 @@ public sealed class PotController : MonoBehaviour
     private void HandleRightHandSculpt()
     {
         if (!triggerPressed) return;
-        if (pottery == null || pottery.ringHeights == null || pottery.ringsCount == 0) return;
-        if (rightControllerTransform == null) return;
+        if (!pottery || pottery.ringHeights == null || pottery.ringsCount == 0) return;
+        if (!rightControllerTransform) return;
 
         Vector3 localPoint = pottery.transform.InverseTransformPoint(rightControllerTransform.position);
 
@@ -150,19 +150,20 @@ public sealed class PotController : MonoBehaviour
 
         float newRadius = currentRadius + direction * speed * Time.deltaTime;
         pottery.ringsRadius[ringIndex] = newRadius;
+        pottery.MarkModified();
     }
 
     // ------------------- TWO-HAND PULL LOGIC -------------------
 
     private void HandleTwoHandPull()
     {
-        if (pottery == null || pottery.ringHeights == null || pottery.ringsCount < 2)
+        if (!pottery || pottery.ringHeights == null || pottery.ringsCount < 2)
             return;
 
         if (!triggerPressed)
             return;
 
-        if (leftControllerTransform == null || rightControllerTransform == null)
+        if (!leftControllerTransform || !rightControllerTransform)
             return;
 
         float maxHandsDistance = selectorRadiusTolerance * 2f;
@@ -225,8 +226,10 @@ public sealed class PotController : MonoBehaviour
         {
             pottery.InsertRingBetween(segmentIndex, segmentIndex + 1);
         }
-
-        pottery.GenerateMesh();
+        
+        isPulling = true;
+        
+        pottery.MarkModified();
     }
     private void HandleSaving()
     {
@@ -250,7 +253,7 @@ public sealed class PotController : MonoBehaviour
 
         if (isLoadPressed && !wasLoadPressed)
         {
-            if (currentHoveredShelfPot != null)
+            if (currentHoveredShelfPot)
             {
                 LoadPotFromShelf(currentHoveredShelfPot);
             }
@@ -265,7 +268,7 @@ public sealed class PotController : MonoBehaviour
 
         if (isPressed && !wasSubmitPressed)
         {
-            if (targetManager != null)
+            if (targetManager)
             {
                 targetManager.EvaluateAndShowResult();
             }
@@ -319,7 +322,7 @@ public sealed class PotController : MonoBehaviour
 
     private int GetRingIndexFromLocalY(float localY)
     {
-        if (pottery == null || pottery.ringHeights == null || pottery.ringHeights.Length == 0)
+        if (!pottery || pottery.ringHeights == null || pottery.ringHeights.Length == 0)
             return -1;
 
         int count = pottery.ringsCount;
@@ -347,7 +350,7 @@ public sealed class PotController : MonoBehaviour
 
     private void ShowSelector(bool isActive)
     {
-        if (selector == null || pottery == null || pottery.ringHeights == null)
+        if (!selector || !pottery || pottery.ringHeights == null)
             return;
 
         if (pottery.ringsCount <= 0)
@@ -379,7 +382,7 @@ public sealed class PotController : MonoBehaviour
             radius * 2.5f
         );
 
-        if (selectorRenderer != null && selectorRenderer.material != null)
+        if (selectorRenderer && selectorRenderer.material)
         {
             selectorRenderer.material.color = isActive ? activeColor : hoverColor;
         }
@@ -387,12 +390,12 @@ public sealed class PotController : MonoBehaviour
 
     private void HideSelector()
     {
-        if (selector != null) selector.SetActive(false);
+        if (selector) selector.SetActive(false);
     }
 
     private void PrintRadiiToConsole()
     {
-        if (pottery == null) return;
+        if (!pottery) return;
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
 

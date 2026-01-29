@@ -9,17 +9,20 @@ public sealed class Potter : MonoBehaviour
 
     [Header("Vertical layout")]
     public float baseRingHeight = 0.2f;
+    public float baseRingRadius = 0.3f;
     public int ringsCount = 3;
+    
+    public float maxPotHeight = 1.2f;
 
-    public float[] ringsRadius = new float[] { 0.3f, 0.3f, 0.3f };
-
-    public float maxPotHeight = 1.2f;  
+    [HideInInspector]
+    public float[] ringsRadius;
 
     [HideInInspector]
     public float[] ringHeights;
 
     [Header("State")]
     public bool isStatic = false;
+
     private float[] defaultRadius;
     private float[] defaultRingHeights;
 
@@ -30,23 +33,34 @@ public sealed class Potter : MonoBehaviour
     public float minRingRadius = 0.15f;
     public float maxRingRadius = 0.9f;
 
+    [Header("Painting")]
+    [SerializeField] private Material potPaintMaterial;   
+    [SerializeField] private int paintTextureSize = 1024; 
+    [SerializeField] private string paintTextureProperty = "_PaintTex";
+
+    private Texture2D paintTexture;
+    private MeshRenderer meshRenderer;
+    
+    private bool isModified = false;
+
     Mesh mesh;
     Body body;
     MeshCollider meshCollider;
 
     void Awake()
     {
-        EnsureArraySizes();
-
-        if (ringsRadius == null || ringsRadius.Length != ringsCount)
+        if(baseRingHeight <= 0.0f || baseRingRadius <= 0.0f || ringsCount <= 2 || maxPotHeight < baseRingHeight * (ringsCount-1)) 
         {
-            UnityEngine.Debug.LogError("ringsRadius array must have exactly ringsCount elements!");
+            Debug.LogError("Invalid values for Pot parameters!");
             return;
         }
-        if (ringHeights == null || ringHeights.Length != ringsCount)
+        
+        ringsRadius = new float[ringsCount];
+        ringHeights = new float[ringsCount];
+        for (int i = 0; i < ringsCount; i++)
         {
-            UnityEngine.Debug.LogError("ringHeights array must have exactly ringsCount elements!");
-            return;
+            ringsRadius[i] = baseRingRadius;
+            ringHeights[i] = baseRingHeight * i;
         }
 
         defaultRadius = (float[])ringsRadius.Clone();
@@ -60,37 +74,61 @@ public sealed class Potter : MonoBehaviour
         var mf = GetComponent<MeshFilter>();
         mf.sharedMesh = mesh;
 
-        var mc = GetComponent<MeshCollider>();
-        mc.sharedMesh = mesh;
+        meshCollider = GetComponent<MeshCollider>();
+        meshCollider.sharedMesh = mesh;
 
-        var mr = GetComponent<MeshRenderer>();
-        mr.materials = new [] {mr.sharedMaterial, mr.sharedMaterial};
+        meshRenderer = GetComponent<MeshRenderer>();
+
+        if (!potPaintMaterial)
+        {
+            Debug.LogError("Potter: potPaintMaterial is not assigned!");
+        }
+        else
+        {
+            meshRenderer.materials = new[] { potPaintMaterial, potPaintMaterial };
+        }
+
+        paintTexture = new Texture2D(paintTextureSize, paintTextureSize, TextureFormat.RGBA32, false);
+        ClearPaintTexture(Color.clear);
+
+        var mats = meshRenderer.materials;
+        foreach (var mat in mats)
+        {
+            if (mat != null && mat.HasProperty(paintTextureProperty))
+            {
+                mat.SetTexture(paintTextureProperty, paintTexture);
+            }
+        }
+        meshRenderer.materials = mats; 
+        
+        GenerateMesh();
     }
 
-    private void EnsureArraySizes()
+    public Texture2D GetPaintTexture()
     {
-        if (ringsCount < 2) ringsCount = 2;
+        return paintTexture;
+    }
+    
+    public void MarkModified() 
+    {
+        isModified = true;
+    }
 
-        if (ringsRadius == null || ringsRadius.Length != ringsCount)
-        {
-            float defaultRadius = 0.5f;
-            var newR = new float[ringsCount];
-            for (int i = 0; i < ringsCount; i++)
-                newR[i] = (ringsRadius != null && i < ringsRadius.Length) ? ringsRadius[i] : defaultRadius;
-            ringsRadius = newR;
-        }
+    public void ClearPaintTexture(Color c)
+    {
+        if (paintTexture == null) return;
 
-        if (ringHeights == null || ringHeights.Length != ringsCount)
-        {
-            ringHeights = new float[ringsCount];
-            for (int i = 0; i < ringsCount; i++)
-                ringHeights[i] = i * baseRingHeight;
-        }
+        Color[] cols = new Color[paintTexture.width * paintTexture.height];
+        for (int i = 0; i < cols.Length; i++)
+            cols[i] = c;
+
+        paintTexture.SetPixels(cols);
+        paintTexture.Apply();
     }
 
     void Update()
     {
-        if (isStatic) return;
+        if (isStatic || !isModified) return;
 
         for (int i = 0; i < ringsRadius.Length; i++)
         {
@@ -98,31 +136,7 @@ public sealed class Potter : MonoBehaviour
         }
 
         GenerateMesh();
-    }
-
-    public float[] GetRadiiData()
-    {
-        return (float[])ringsRadius.Clone();
-    }
-
-    public void SetRadiiData(float[] newData)
-    {
-        if (newData.Length != ringsCount) return;
-        System.Array.Copy(newData, ringsRadius, ringsCount);
-        GenerateMesh();
-    }
-
-    public void ResetPot()
-    {
-        if (defaultRadius != null && defaultRingHeights != null)
-        {
-            ringsCount = defaultRadius.Length;
-            ringsRadius = (float[])defaultRadius.Clone();
-            ringHeights = (float[])defaultRingHeights.Clone();
-
-            body = new Body(faces, ringsCount, ringHeights, ringsRadius);
-            GenerateMesh();
-        }
+        isModified = false;
     }
 
     public void GenerateMesh()
@@ -134,7 +148,7 @@ public sealed class Potter : MonoBehaviour
             body = new Body(faces, ringsCount, ringHeights, ringsRadius);
         }
 
-        body.UpdateVertices();
+        body.InitializeVertices();
 
         int facesN = body.vertices.GetLength(0);
         int ringsN = body.vertices.GetLength(1);
@@ -228,10 +242,33 @@ public sealed class Potter : MonoBehaviour
     
         mesh.RecalculateBounds();
 
-        if (meshCollider != null)
+        if (meshCollider)
         {
             meshCollider.sharedMesh = null;
             meshCollider.sharedMesh = mesh;
+        }
+
+    }
+    
+    public float[] GetRadiiData() {
+        return (float[])ringsRadius.Clone();
+    }
+
+    public void SetRadiiData(float[] newData) {
+        if (newData.Length != ringsCount) return;
+        System.Array.Copy(newData, ringsRadius, ringsCount);
+        GenerateMesh();
+    }
+
+    public void ResetPot() {
+        if (defaultRadius != null && defaultRingHeights != null)
+        {
+            ringsCount = defaultRadius.Length;
+            ringsRadius = (float[])defaultRadius.Clone();
+            ringHeights = (float[])defaultRingHeights.Clone();
+
+            body = new Body(faces, ringsCount, ringHeights, ringsRadius);
+            GenerateMesh();
         }
     }
 
@@ -274,17 +311,9 @@ public sealed class Potter : MonoBehaviour
         ringsRadius = newRadii;
         ringHeights = newHeights;
 
-        body = new Body(faces, ringsCount, ringHeights, ringsRadius);
         GenerateMesh();
     }
 
-    public void SetRingHeight(int ringIndex, float newHeight)
-    {
-        if (ringIndex < 0 || ringIndex >= ringsCount) return;
-
-        ringHeights[ringIndex] = newHeight;
-        GenerateMesh();
-    }
 
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()

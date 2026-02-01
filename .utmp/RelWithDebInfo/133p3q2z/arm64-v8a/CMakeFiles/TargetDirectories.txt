@@ -1,0 +1,5 @@
+/home/dudu/MixedRealities/Untitled-Pottery-Game/.utmp/RelWithDebInfo/133p3q2z/arm64-v8a/CMakeFiles/edit_cache.dir
+/home/dudu/MixedRealities/Untitled-Pottery-Game/.utmp/RelWithDebInfo/133p3q2z/arm64-v8a/CMakeFiles/rebuild_cache.dir
+/home/dudu/MixedRealities/Untitled-Pottery-Game/.utmp/RelWithDebInfo/133p3q2z/arm64-v8a/GameActivity/CMakeFiles/game.dir
+/home/dudu/MixedRealities/Untitled-Pottery-Game/.utmp/RelWithDebInfo/133p3q2z/arm64-v8a/GameActivity/CMakeFiles/edit_cache.dir
+/home/dudu/MixedRealities/Untitled-Pottery-Game/.utmp/RelWithDebInfo/133p3q2z/arm64-v8a/GameActivity/CMakeFiles/rebuild_cache.dir

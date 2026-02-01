@@ -1,0 +1,10 @@
+# ninja log v5
+10	7414	1767976341716372025	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	9dbdfd0b95ef0e36
+8	7512	1767976341819476102	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	3f145a9ad59779eb
+3	7525	1767976341833741355	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	414283320861c4d6
+15	7531	1767976341839741017	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	398ee124ca74745b
+5	7683	1767976341992781873	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	9377e9c4434aa6a0
+9	7694	1767976342003731767	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	aa751199573c4e42
+0	7874	1767976342184357119	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	9cd201cb54889d4
+16	8968	1767976343268098600	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	13fe90db68e24ab3
+8968	9068	1767976343380654412	/home/dudu/MixedRealities/Untitled-Pottery-Game/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/133p3q2z/obj/arm64-v8a/libgame.so	31b5e395ab0394cf

@@ -2343,7 +2343,7 @@ GameObject:
   - component: {fileID: 618960123}
   - component: {fileID: 618960122}
   m_Layer: 0
-  m_Name: Brush Tip
+  m_Name: BrushTip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3444,12 +3444,12 @@ GameObject:
   - component: {fileID: 793365146}
   - component: {fileID: 793365145}
   m_Layer: 0
-  m_Name: Paint Brush
+  m_Name: Brush
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!136 &793365141
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -3537,13 +3537,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 793365139}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.3, y: 1.666667, z: 0.3}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 5.54, y: 0.625, z: 0.5}
+  m_LocalScale: {x: 0.018, y: 0.1, z: 0.018}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 618960124}
-  m_Father: {fileID: 990104423}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!114 &793365145
 MonoBehaviour:
@@ -4662,8 +4662,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.06, y: 0.06, z: 0.06}
   m_ConstrainProportionsScale: 1
-  m_Children:
-  - {fileID: 793365144}
+  m_Children: []
   m_Father: {fileID: 1834461320}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &990104425
@@ -8070,7 +8069,6 @@ GameObject:
   - component: {fileID: 2032573772}
   - component: {fileID: 2032573776}
   - component: {fileID: 2032573775}
-  - component: {fileID: 2032573778}
   - component: {fileID: 2032573777}
   m_Layer: 0
   m_Name: XR Origin (VR)
@@ -8162,6 +8160,76 @@ MonoBehaviour:
   activeColor: {r: 0, g: 1, b: 0, a: 0.5}
   baseSelectorHeight: 0.1
   selectorRadiusTolerance: 0.15
+  shelfManager: {fileID: 639790778}
+  saveAction:
+    m_UseReference: 0
+    m_Action:
+      m_Name: Save
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: 2979e207-1d66-460d-b0dd-e17d6c456633
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings:
+      - m_Name: 
+        m_Id: 4d01b6fc-1adc-4f13-9d94-4b5b3a0f3477
+        m_Path: <Keyboard>/p
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: Save
+        m_Flags: 0
+      - m_Name: 
+        m_Id: 78033fd8-b2e4-480e-a252-804ec51f4b01
+        m_Path: 
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: Save
+        m_Flags: 0
+      m_Flags: 0
+    m_Reference: {fileID: 0}
+  loadAction:
+    m_UseReference: 0
+    m_Action:
+      m_Name: Load
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: ecb88d73-928e-42e2-918a-e38069c03421
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings:
+      - m_Name: 
+        m_Id: be5cb1b1-4c28-4f72-aa75-b62c01c6e1a8
+        m_Path: <Keyboard>/l
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: Load
+        m_Flags: 0
+      m_Flags: 0
+    m_Reference: {fileID: 0}
+  targetManager: {fileID: 435074172}
+  submitAction:
+    m_UseReference: 0
+    m_Action:
+      m_Name: Submit
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: c8accd5d-fb11-4874-90a6-50e3f7e14c75
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings:
+      - m_Name: 
+        m_Id: 677fbff5-9cd2-45f8-afcb-174999f37101
+        m_Path: <Keyboard>/o
+        m_Interactions: 
+        m_Processors: 
+        m_Groups: 
+        m_Action: Submit
+        m_Flags: 0
+      m_Flags: 0
+    m_Reference: {fileID: 0}
 --- !u!143 &2032573776
 CharacterController:
   m_ObjectHideFlags: 0
@@ -8215,81 +8283,6 @@ MonoBehaviour:
   m_MotionControllerModeEnded:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &2032573778
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2032573771}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4c508fd520ed480ebc5132bfeb67d37d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PotWorkflowController
-  pottery: {fileID: 7132265891756064850}
-  shelfManager: {fileID: 639790778}
-  targetManager: {fileID: 435074172}
-  saveAction:
-    m_UseReference: 0
-    m_Action:
-      m_Name: Save
-      m_Type: 0
-      m_ExpectedControlType: 
-      m_Id: bc80addd-2929-4215-a26c-923dfb38b757
-      m_Processors: 
-      m_Interactions: 
-      m_SingletonActionBindings:
-      - m_Name: 
-        m_Id: dfa460f2-140f-471a-bfa6-09c1d6bbcfa1
-        m_Path: <Keyboard>/p
-        m_Interactions: 
-        m_Processors: 
-        m_Groups: 
-        m_Action: Save
-        m_Flags: 0
-      m_Flags: 0
-    m_Reference: {fileID: 0}
-  loadAction:
-    m_UseReference: 0
-    m_Action:
-      m_Name: Load
-      m_Type: 0
-      m_ExpectedControlType: 
-      m_Id: ffa3ef28-0405-48ad-aaaf-5bccf6189c72
-      m_Processors: 
-      m_Interactions: 
-      m_SingletonActionBindings:
-      - m_Name: 
-        m_Id: 403b7595-c52a-4b6e-be9d-cb6955d89bb1
-        m_Path: <Keyboard>/l
-        m_Interactions: 
-        m_Processors: 
-        m_Groups: 
-        m_Action: Load
-        m_Flags: 0
-      m_Flags: 0
-    m_Reference: {fileID: 0}
-  submitAction:
-    m_UseReference: 0
-    m_Action:
-      m_Name: Submit
-      m_Type: 0
-      m_ExpectedControlType: 
-      m_Id: 02fb6de8-57ea-47ce-b64b-638c8fafa82f
-      m_Processors: 
-      m_Interactions: 
-      m_SingletonActionBindings:
-      - m_Name: 
-        m_Id: 719002bf-dc78-43b0-9db4-2322cca7958e
-        m_Path: <Keyboard>/o
-        m_Interactions: 
-        m_Processors: 
-        m_Groups: 
-        m_Action: Submit
-        m_Flags: 0
-      m_Flags: 0
-    m_Reference: {fileID: 0}
 --- !u!1001 &2117966195
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12947,3 +12940,4 @@ SceneRoots:
   - {fileID: 639790779}
   - {fileID: 435074173}
   - {fileID: 776258186}
+  - {fileID: 793365144}

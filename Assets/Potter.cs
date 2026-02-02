@@ -1,4 +1,5 @@
-﻿﻿using UnityEngine;
+﻿using UnityEngine;
+using System;
 
 [RequireComponent(typeof(MeshFilter))]
 [RequireComponent(typeof(MeshRenderer))]
@@ -8,10 +9,10 @@ public sealed class Potter : MonoBehaviour
     public int faces = 16;
 
     [Header("Vertical layout")]
-    public float baseRingHeight = 0.2f;
+    public float baseRingHeight = 0.05f;
     public float baseRingRadius = 0.3f;
-    public int ringsCount = 3;
-    
+    public int ringsCount = 12;
+
     public float maxPotHeight = 1.2f;
 
     [HideInInspector]
@@ -34,13 +35,15 @@ public sealed class Potter : MonoBehaviour
     public float maxRingRadius = 0.9f;
 
     [Header("Painting")]
-    [SerializeField] private Material potPaintMaterial;   
-    [SerializeField] private int paintTextureSize = 1024; 
+    [SerializeField] private Material potPaintMaterial;
+    [SerializeField] private int paintTextureSize = 1024;
     [SerializeField] private string paintTextureProperty = "_PaintTex";
 
-    private Texture2D paintTexture;
-    private MeshRenderer meshRenderer;
+    private Texture2D paintTexture;      
+    private Texture2D paintTextureInside;  
     
+    private MeshRenderer meshRenderer;
+
     private bool isModified = false;
 
     Mesh mesh;
@@ -49,150 +52,182 @@ public sealed class Potter : MonoBehaviour
 
     void Awake()
     {
-        if(baseRingHeight <= 0.0f || baseRingRadius <= 0.0f || ringsCount <= 2 || maxPotHeight < baseRingHeight * (ringsCount-1)) 
-        {
-            Debug.LogError("Invalid values for Pot parameters!");
-            return;
-        }
-        
-        ringsRadius = new float[ringsCount];
-        ringHeights = new float[ringsCount];
-        for (int i = 0; i < ringsCount; i++)
-        {
-            ringsRadius[i] = baseRingRadius;
-            ringHeights[i] = baseRingHeight * i;
-        }
+        mesh = new Mesh();
+        mesh.name = "PotMesh";
 
-        defaultRadius = (float[])ringsRadius.Clone();
-        defaultRingHeights = (float[])ringHeights.Clone();
-
-        body = new Body(faces, ringsCount, ringHeights, ringsRadius);
-
-        mesh = new Mesh { name = "Pot" };
-        mesh.MarkDynamic();
-
-        var mf = GetComponent<MeshFilter>();
-        mf.sharedMesh = mesh;
-
-        meshCollider = GetComponent<MeshCollider>();
-        meshCollider.sharedMesh = mesh;
+        meshFilter = GetComponent<MeshFilter>();
+        meshFilter.mesh = mesh;
 
         meshRenderer = GetComponent<MeshRenderer>();
-
-        if (!potPaintMaterial)
+        if (potPaintMaterial != null)
         {
-            Debug.LogError("Potter: potPaintMaterial is not assigned!");
-        }
-        else
-        {
-            meshRenderer.materials = new[] { potPaintMaterial, potPaintMaterial };
-        }
-
-        paintTexture = new Texture2D(paintTextureSize, paintTextureSize, TextureFormat.RGBA32, false);
-        ClearPaintTexture(Color.clear);
-
-        var mats = meshRenderer.materials;
-        foreach (var mat in mats)
-        {
-            if (mat != null && mat.HasProperty(paintTextureProperty))
+            meshRenderer.materials = new[]
             {
-                mat.SetTexture(paintTextureProperty, paintTexture);
-            }
+                new Material(potPaintMaterial),
+                new Material(potPaintMaterial)
+            };
         }
-        meshRenderer.materials = mats; 
+
+        paintTexture = CreatePaintTexture();
+        paintTextureInside = CreatePaintTexture();
         
-        GenerateMesh();
+        var mats = meshRenderer.materials;
+
+        if (mats.Length > 0 && mats[0] != null && mats[0].HasProperty(paintTextureProperty))
+        {
+            mats[0].SetTexture(paintTextureProperty, paintTexture);
+        }
+
+        if (mats.Length > 1 && mats[1] != null && mats[1].HasProperty(paintTextureProperty))
+        {
+            mats[1].SetTexture(paintTextureProperty, paintTextureInside);
+        }
+
+        meshRenderer.materials = mats;
+        
+        meshCollider = GetComponent<MeshCollider>();
+
+        if (ringsRadius == null || ringsRadius.Length != ringsCount)
+        {
+            ResetPot();
+        }
     }
 
-    public Texture2D GetPaintTexture()
+    private MeshFilter meshFilter;
+
+    public Texture2D GetPaintTexture(int submeshIndex = 0)
     {
+        if (submeshIndex == 1) return paintTextureInside;
         return paintTexture;
     }
     
-    public void MarkModified() 
+    private Texture2D CreatePaintTexture()
+    {
+        var tex = new Texture2D(paintTextureSize, paintTextureSize, TextureFormat.RGBA32, false);
+        
+        var fill = Color.clear;
+        var fills = new Color[paintTextureSize * paintTextureSize];
+        for (int i = 0; i < fills.Length; i++)
+            fills[i] = fill;
+        
+        tex.SetPixels(fills);
+        tex.Apply();
+        
+        return tex;
+    }
+
+    public void MarkModified()
     {
         isModified = true;
     }
 
+    public void SetPaintTexture()
+    {
+        float h = GetTotalHeight();
+        float avgRadius = 0f;
+
+        if (ringsRadius != null && ringsCount > 0)
+        {
+            for (int i = 0; i < ringsCount; i++)
+            {
+                avgRadius += ringsRadius[i];
+            }
+            avgRadius /= ringsCount;
+        }
+
+        float circumference = 2f * Mathf.PI * avgRadius;
+
+        if (circumference > 0.0001f)
+        {
+            int newHeight = Mathf.RoundToInt(paintTextureSize * (h / circumference));
+            newHeight = Mathf.Clamp(newHeight, 16, 8192);
+
+            ResizeAndClear(paintTexture, newHeight);
+            ResizeAndClear(paintTextureInside, newHeight);
+        }
+    }
+
+    private void ResizeAndClear(Texture2D tex, int newHeight)
+    {
+        if (tex == null) return;
+        if (tex.height != newHeight)
+        {
+            tex.Reinitialize(paintTextureSize, newHeight);
+            ClearTexture(tex, Color.clear);
+        }
+    }
+
+    private void ClearTexture(Texture2D tex, Color c)
+    {
+        if (tex == null) return;
+        var cols = tex.GetPixels();
+        for (int i = 0; i < cols.Length; ++i) cols[i] = c;
+        tex.SetPixels(cols);
+        tex.Apply();
+    }
+
     public void ClearPaintTexture(Color c)
     {
-        if (paintTexture == null) return;
-
-        Color[] cols = new Color[paintTexture.width * paintTexture.height];
-        for (int i = 0; i < cols.Length; i++)
-            cols[i] = c;
-
-        paintTexture.SetPixels(cols);
-        paintTexture.Apply();
+        ClearTexture(paintTexture, c);
+        ClearTexture(paintTextureInside, c);
     }
 
     void Update()
     {
-        if (isStatic || !isModified) return;
+        if (isStatic) return;
 
-        for (int i = 0; i < ringsRadius.Length; i++)
+        if (isModified)
         {
-            ringsRadius[i] = Mathf.Clamp(ringsRadius[i], minRingRadius, maxRingRadius);
+            GenerateMesh();
+            isModified = false;
         }
-
-        GenerateMesh();
-        isModified = false;
     }
 
     public void GenerateMesh()
     {
-        if (body == null) return;
-
-        if (body.vertices.GetLength(1) != ringsCount)
+        if (body == null || body.vertices.GetLength(1) != ringsCount)
         {
             body = new Body(faces, ringsCount, ringHeights, ringsRadius);
         }
 
         body.InitializeVertices();
 
-        int facesN = body.vertices.GetLength(0);
-        int ringsN = body.vertices.GetLength(1);
-        int vCount = facesN * ringsN;
+        Vector3[] vOut = body.VerticesToPositionArray();
+        Vector3[] nOut = body.VerticesToNormalsArray();
 
-        Vector3[] posOut = body.VerticesToPositionArray();
-        Vector3[] nrmOut = body.VerticesToNormalsArray(); 
+        int vertexCountOneSide = vOut.Length;
+        int totalVertices = vertexCountOneSide * 2;
 
-        Vector3[] vertices = new Vector3[vCount * 2];
-        Vector3[] normals = new Vector3[vCount * 2];
-        Vector2[] uvs = new Vector2[vCount * 2];
+        Vector3[] vertices = new Vector3[totalVertices];
+        Vector3[] normals = new Vector3[totalVertices];
+        Vector2[] uvs = new Vector2[totalVertices];
 
-        Vector2[] uvOut = new Vector2[vCount];
-        for (int y = 0; y < ringsN; y++)
+        float totalH = GetTotalHeight();
+        
+        Array.Copy(vOut, 0, vertices, 0, vertexCountOneSide);
+        Array.Copy(nOut, 0, normals, 0, vertexCountOneSide);
+        
+        for (int i = 0; i < vertexCountOneSide; i++)
         {
-            for (int x = 0; x < facesN; x++)
-            {
-                int i = x + y * facesN;
-                float u = facesN > 1 ? x / (facesN - 1f) : 0f;
-                float v = ringsN > 1 ? y / (ringsN - 1f) : 0f;
-                uvOut[i] = new Vector2(u, v);
-            }
+            vertices[vertexCountOneSide + i] = vOut[i];
+            normals[vertexCountOneSide + i] = -nOut[i];
         }
 
-        for (int i = 0; i < vCount; i++)
+        for (int y = 0; y < ringsCount; y++)
         {
-            vertices[i] = posOut[i];
-            normals[i] = nrmOut[i];
-            uvs[i] = uvOut[i];
-        }
+            float v = ringHeights[y] / totalH;
 
-        int offset = vCount;
-        for (int i = 0; i < vCount; i++)
-        {
-            vertices[offset + i] = posOut[i];
-            normals[offset + i] = -nrmOut[i];
+            for (int x = 0; x < faces; x++)
+            {
+                int indexOut = y * faces + x;
+                int indexIn = vertexCountOneSide + indexOut;
 
-            if (flipUInside)
-            {
-                uvs[offset + i] = new Vector2(1f - uvOut[i].x, uvOut[i].y);
-            }
-            else
-            {
-                uvs[offset + i] = uvOut[i];
+                float u = (float)x / (faces - 1);
+                
+                uvs[indexOut] = new Vector2(u, v);
+
+                float uIn = flipUInside ? (1f - u) : u;
+                uvs[indexIn] = new Vector2(uIn, v);
             }
         }
 
@@ -200,128 +235,113 @@ public sealed class Potter : MonoBehaviour
         mesh.normals = normals;
         mesh.uv = uvs;
 
-        int triPerQuad = 6;
-        int quadCount = (facesN - 1) * (ringsN - 1);
-        int triCount = quadCount * triPerQuad;
-
-        int[] outsideTris = new int[triCount];
-        int t = 0;
-        for (int y = 0; y < ringsN - 1; y++)
-        {
-            for (int x = 0; x < facesN - 1; x++)
-            {
-                int a = body.vertices[x, y].index;
-                int b = body.vertices[x, y + 1].index;
-                int c = body.vertices[x + 1, y + 1].index;
-                int d = body.vertices[x + 1, y].index;
-
-                outsideTris[t++] = a; outsideTris[t++] = b; outsideTris[t++] = c;
-                outsideTris[t++] = a; outsideTris[t++] = c; outsideTris[t++] = d;
-            }
-        }
-
-        int[] insideTris = new int[triCount];
-        t = 0;
-        for (int y = 0; y < ringsN - 1; y++)
-        {
-            for (int x = 0; x < facesN - 1; x++)
-            {
-                int a = body.vertices[x, y].index + offset;
-                int b = body.vertices[x, y + 1].index + offset;
-                int c = body.vertices[x + 1, y + 1].index + offset;
-                int d = body.vertices[x + 1, y].index + offset;
-
-                insideTris[t++] = c; insideTris[t++] = b; insideTris[t++] = a;
-                insideTris[t++] = d; insideTris[t++] = c; insideTris[t++] = a;
-            }
-        }
-
+        // Triangles
         mesh.subMeshCount = 2;
-        mesh.SetTriangles(outsideTris, 0);
-        mesh.SetTriangles(insideTris, 1);
-    
-        mesh.RecalculateBounds();
 
-        if (meshCollider)
+        int numQuads = (faces - 1) * (ringsCount - 1);
+        int[] trisOut = new int[numQuads * 6];
+        int[] trisIn = new int[numQuads * 6];
+
+        int t = 0;
+        for (int y = 0; y < ringsCount - 1; y++)
         {
-            meshCollider.sharedMesh = null;
-            meshCollider.sharedMesh = mesh;
+            for (int x = 0; x < faces - 1; x++)
+            {
+                int bl = y * faces + x;
+                int br = y * faces + (x + 1);
+                int tl = (y + 1) * faces + x;
+                int tr = (y + 1) * faces + (x + 1);
+
+                // Outside (CCW)
+                trisOut[t] = bl;
+                trisOut[t + 1] = tl;
+                trisOut[t + 2] = br;
+                trisOut[t + 3] = br;
+                trisOut[t + 4] = tl;
+                trisOut[t + 5] = tr;
+                
+                int off = vertexCountOneSide;
+                trisIn[t] = off + bl;
+                trisIn[t + 1] = off + br;
+                trisIn[t + 2] = off + tl;
+                trisIn[t + 3] = off + br;
+                trisIn[t + 4] = off + tr;
+                trisIn[t + 5] = off + tl;
+
+                t += 6;
+            }
         }
 
+        mesh.SetTriangles(trisOut, 0);
+        mesh.SetTriangles(trisIn, 1);
+
+        mesh.RecalculateBounds();
+        meshCollider.sharedMesh = null;
+        meshCollider.sharedMesh = mesh;
     }
-    
+
     public float[] GetRadiiData() {
         return (float[])ringsRadius.Clone();
     }
 
     public void SetRadiiData(float[] newData) {
         if (newData.Length != ringsCount) return;
-        System.Array.Copy(newData, ringsRadius, ringsCount);
-        GenerateMesh();
+        ringsRadius = newData;
+        isModified = true;
     }
 
     public void ResetPot() {
-        if (defaultRadius != null && defaultRingHeights != null)
-        {
-            ringsCount = defaultRadius.Length;
-            ringsRadius = (float[])defaultRadius.Clone();
-            ringHeights = (float[])defaultRingHeights.Clone();
+        ringsRadius = new float[ringsCount];
+        ringHeights = new float[ringsCount];
+        defaultRadius = new float[ringsCount];
+        defaultRingHeights = new float[ringsCount];
 
-            body = new Body(faces, ringsCount, ringHeights, ringsRadius);
-            GenerateMesh();
+        for (int i = 0; i < ringsCount; i++)
+        {
+            ringsRadius[i] = baseRingRadius;
+            ringHeights[i] = i * baseRingHeight;
+
+            defaultRadius[i] = ringsRadius[i];
+            defaultRingHeights[i] = ringHeights[i];
         }
+
+        isModified = true;
     }
 
     public float GetTotalHeight()
     {
-        if (ringHeights == null || ringHeights.Length == 0)
-            return 0f;
-
-        return ringHeights[ringHeights.Length - 1] - ringHeights[0];
+        if (ringHeights == null || ringHeights.Length == 0) return 0f;
+        return ringHeights[ringsCount - 1] - ringHeights[0];
     }
 
     public void InsertRingBetween(int lowerIndex, int upperIndex)
     {
-        if (lowerIndex < 0 || upperIndex >= ringsCount || upperIndex != lowerIndex + 1) return;
+        if (lowerIndex < 0 || upperIndex >= ringsCount || (upperIndex - lowerIndex) != 1) return;
 
         int newCount = ringsCount + 1;
+        float[] newR = new float[newCount];
+        float[] newH = new float[newCount];
+        
+        float avgH = (ringHeights[lowerIndex] + ringHeights[upperIndex]) * 0.5f;
+        float avgR = (ringsRadius[lowerIndex] + ringsRadius[upperIndex]) * 0.5f;
 
-        float newHeight = 0.5f * (ringHeights[lowerIndex] + ringHeights[upperIndex]);
-        float newRadius = 0.5f * (ringsRadius[lowerIndex] + ringsRadius[upperIndex]);
+        for (int i = 0; i <= lowerIndex; i++) {
+            newR[i] = ringsRadius[i];
+            newH[i] = ringHeights[i];
+        }
 
-        var newRadii = new float[newCount];
-        var newHeights = new float[newCount];
+        newR[lowerIndex + 1] = avgR;
+        newH[lowerIndex + 1] = avgH;
 
-        int write = 0;
-        for (int i = 0; i < ringsCount; i++)
-        {
-            newRadii[write] = ringsRadius[i];
-            newHeights[write] = ringHeights[i];
-            write++;
-
-            if (i == lowerIndex)
-            {
-                newRadii[write] = newRadius;
-                newHeights[write] = newHeight;
-                write++;
-            }
+        for (int i = upperIndex; i < ringsCount; i++) {
+            newR[i + 1] = ringsRadius[i];
+            newH[i + 1] = ringHeights[i];
         }
 
         ringsCount = newCount;
-        ringsRadius = newRadii;
-        ringHeights = newHeights;
-
-        GenerateMesh();
+        ringsRadius = newR;
+        ringHeights = newH;
+        body = null;
+        MarkModified();
     }
-
-
-#if UNITY_EDITOR
-    void OnDrawGizmosSelected()
-    {
-        if (mesh == null || body == null) return;
-        Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireMesh(mesh);
-    }
-#endif
 }

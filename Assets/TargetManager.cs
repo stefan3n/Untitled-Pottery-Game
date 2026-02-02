@@ -1,6 +1,6 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem; 
+using UnityEngine.InputSystem;
 
 public class TargetManager : MonoBehaviour
 {
@@ -9,14 +9,17 @@ public class TargetManager : MonoBehaviour
     public Potter targetPotDisplay;
 
     [Header("UI")]
-    public GameObject resultPanel; // Canvas-ul cu text
-    public TextMeshProUGUI resultText; // Textul
+    public GameObject resultPanel;
+    public TextMeshProUGUI resultText;
 
     [Header("Level Data")]
     public LevelData currentLevel;
 
-    // Stare interna: false = jucam, true = vedem rezultatul
     private bool isShowingResult = false;
+
+    [Header("Difficulty Settings")]
+    [Tooltip("Cat de mult poti gresi (in metri) si sa fie considerat perfect.")]
+    public float toleranceMargin = 0.03f; // 3cm toleranta
 
     private void Start()
     {
@@ -27,7 +30,6 @@ public class TargetManager : MonoBehaviour
                 targetPotDisplay.GetComponent<Rigidbody>().isKinematic = true;
         }
 
-        // Mesajul e ascund la inceput
         if (resultPanel != null) resultPanel.SetActive(false);
 
         if (currentLevel != null)
@@ -42,17 +44,16 @@ public class TargetManager : MonoBehaviour
 
         if (targetPotDisplay == null) return;
 
-        targetPotDisplay.SetRadiiData(level.targetRadii);
+        targetPotDisplay.LoadPotData(level.targetRadii, level.targetHeights);
         targetPotDisplay.GenerateMesh();
     }
 
     public void EvaluateAndShowResult()
     {
-        if (isShowingResult) return; 
+        if (isShowingResult) return;
 
         float accuracy = CalculateAccuracy();
 
-        // Afisez UI-ul
         if (resultPanel != null && resultText != null)
         {
             resultPanel.SetActive(true);
@@ -60,65 +61,79 @@ public class TargetManager : MonoBehaviour
         }
 
         isShowingResult = true;
-        Debug.Log($"Evalation finished. Accuracy: {accuracy}");
+        Debug.Log($"Evaluation finished. Accuracy: {accuracy}");
     }
 
     public void RestartGame()
     {
-        // Ascund UI-ul
         if (resultPanel != null) resultPanel.SetActive(false);
-
-        // Resetez vasul
         if (playerPot != null) playerPot.ResetPot();
 
         isShowingResult = false;
         Debug.Log("Game restarted.");
     }
 
-    [Header("Difficulty Settings")]
-    [Tooltip("90% => 100% score")]
-    [Range(0.8f, 1.0f)]
-    public float completionThreshold = 0.90f; 
-
-    // Raza default a vasului 
-    private const float DEFAULT_START_RADIUS = 0.5f;
-
     public float CalculateAccuracy()
     {
         if (playerPot == null || currentLevel == null) return 0f;
-        if (playerPot.ringsRadius.Length != currentLevel.targetRadii.Length) return 0f;
 
-        float totalInitialDiff = 0f;
-        float totalCurrentDiff = 0f;
+        
+        float totalError = 0f;
+        int samplePoints = 0;
 
-        int ringCount = playerPot.ringsRadius.Length;
+        float playerHeight = playerPot.GetTotalHeight();
+        float targetHeight = targetPotDisplay.GetTotalHeight();
 
-        for (int i = 0; i < ringCount; i++)
+        float heightDiff = Mathf.Abs(playerHeight - targetHeight);
+        totalError += heightDiff * 2.0f; 
+
+        for (int i = 0; i < currentLevel.targetHeights.Length; i++)
         {
+            float h = currentLevel.targetHeights[i];
             float targetR = currentLevel.targetRadii[i];
-            float playerR = playerPot.ringsRadius[i];
 
-            // Cat de gresit e vasul daca nu este modificat
-            totalInitialDiff += Mathf.Abs(DEFAULT_START_RADIUS - targetR);
+            float playerR = GetPlayerRadiusAtHeight(h);
 
-            // Cat de gresit e vasul acum
-            totalCurrentDiff += Mathf.Abs(playerR - targetR);
+            float diff = Mathf.Abs(playerR - targetR);
+
+            if (diff <= toleranceMargin) diff = 0f;
+
+            totalError += diff;
+            samplePoints++;
         }
 
-        if (totalInitialDiff < 0.001f) return 1.0f;
+        float avgError = (samplePoints > 0) ? totalError / samplePoints : 1.0f;
 
-        float errorRatio = totalCurrentDiff / totalInitialDiff;
+        float score = 1.0f - (avgError / 0.15f);
 
-        float score = 1.0f - errorRatio;
+        return Mathf.Clamp01(score);
+    }
 
-        score = Mathf.Max(0f, score);
+    private float GetPlayerRadiusAtHeight(float targetH)
+    {
+        if (targetH < playerPot.ringHeights[0])
+            return playerPot.ringsRadius[0];
 
-        if (score >= completionThreshold)
+        if (targetH > playerPot.ringHeights[playerPot.ringsCount - 1])
+            return playerPot.ringsRadius[playerPot.ringsCount - 1];
+
+        for (int i = 0; i < playerPot.ringsCount - 1; i++)
         {
-            return 1.0f;
+            float h1 = playerPot.ringHeights[i];
+            float h2 = playerPot.ringHeights[i + 1];
+
+            if (targetH >= h1 && targetH <= h2)
+            {
+                float t = (targetH - h1) / (h2 - h1);
+
+                float r1 = playerPot.ringsRadius[i];
+                float r2 = playerPot.ringsRadius[i + 1];
+
+                return Mathf.Lerp(r1, r2, t);
+            }
         }
 
-        return score;
+        return 0f; 
     }
 
     private void Update()
@@ -130,8 +145,6 @@ public class TargetManager : MonoBehaviour
                 RestartGame();
                 return;
             }
-
-            // AICI ADAUGAM SI PENTRU ORICE TASTA DE PE CONTROLLER
         }
     }
 }

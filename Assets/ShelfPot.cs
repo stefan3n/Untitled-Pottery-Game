@@ -3,23 +3,23 @@ using UnityEngine;
 public class ShelfPot : MonoBehaviour
 {
     public int ShelfSlotIndex { get; private set; }
-    private float[] potData;
+
+    private float[] savedRadii;
+    private float[] savedHeights;
     private Renderer[] renderers;
     private Material[] originalMaterials;
 
-    public void Initialize(int slotIndex, float[] data)
+    public void Initialize(int slotIndex, float[] radii, float[] heights)
     {
         ShelfSlotIndex = slotIndex;
-        potData = data;
+        savedRadii = radii;
+        savedHeights = heights;
         renderers = GetComponentsInChildren<Renderer>();
     }
 
-    public float[] GetData()
-    {
-        return potData;
-    }
+    public float[] GetRadii() => savedRadii;
+    public float[] GetHeights() => savedHeights;
 
-    // Glow highlight pentru vasul din raft
     public void SetHighlight(bool active)
     {
         if (renderers == null) return;
@@ -28,15 +28,11 @@ public class ShelfPot : MonoBehaviour
         {
             if (active)
             {
-                // Salvez materialele
                 if (originalMaterials == null || originalMaterials.Length == 0)
                     originalMaterials = rend.sharedMaterials;
 
-                // Creez glow-ul
                 Material glowMat = new Material(Shader.Find("Standard"));
-                glowMat.color = new Color(0f, 1f, 1f, 0.5f); // Turcoaz transparent
-
-                // Setez stralucirea
+                glowMat.color = new Color(0f, 1f, 1f, 0.5f);
                 glowMat.EnableKeyword("_EMISSION");
                 glowMat.SetColor("_EmissionColor", new Color(0f, 0.8f, 0.8f) * 2f);
 
@@ -44,7 +40,6 @@ public class ShelfPot : MonoBehaviour
             }
             else
             {
-                // Revin la materialele originale
                 if (originalMaterials != null)
                 {
                     rend.sharedMaterials = originalMaterials;

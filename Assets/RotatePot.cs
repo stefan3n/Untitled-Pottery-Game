@@ -4,7 +4,8 @@ public sealed class RotatePot : MonoBehaviour
 {
 	[SerializeField]
 	private float speed = 20f;
-	public bool IsRunning { get; private set; }
+
+	private bool IsRunning { get; set; }
 	
 	void Update()
 	{
@@ -16,4 +17,9 @@ public sealed class RotatePot : MonoBehaviour
 	public void ToggleWheel(){
 		IsRunning = !IsRunning;
     }
+
+	public bool IsRotating()
+	{
+		return IsRunning;
+	}
 }

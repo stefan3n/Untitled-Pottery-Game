@@ -4,15 +4,28 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Collider))]
 public class PaintBrush : MonoBehaviour
 {
+    public enum BrushMode
+    {
+        Normal,
+        Erase,
+        Spray,
+        Bucket
+    }
+
     [Header("References")]
     [SerializeField] private Potter pottery;
     [SerializeField] private LayerMask potLayerMask = ~0;
 
     [Header("Brush Settings")]
-    [SerializeField] private float brushRadiusUV = 0.02f;
+    [SerializeField] private BrushMode currentMode = BrushMode.Normal;
     [SerializeField] private Color brushColor = Color.red;
-    [SerializeField] private bool erase = false;
-    [SerializeField] private float raycastDistance = 0.2f;
+    [SerializeField, Range(0.001f, 0.2f)] private float brushRadiusUV = 0.01f;
+    [SerializeField, Range(0.01f, 1f)] private float sprayDensity = 0.1f;
+    [SerializeField] private float raycastDistance = 0.5f;
+
+    [Header("UI Control Limits")]
+    [SerializeField] private float minBrushSize = 0.01f;
+    [SerializeField] private float maxBrushSize = 0.1f;
 
     [Header("Ray Settings")]
     [SerializeField] private Transform rayOrigin;
@@ -23,6 +36,9 @@ public class PaintBrush : MonoBehaviour
 
     private Collider col;
     private bool canPaint;
+
+    private float lastBucketPaintTime = 0f;
+    private const float BUCKET_COOLDOWN = 0.2f;
 
     private void Awake()
     {
@@ -49,83 +65,142 @@ public class PaintBrush : MonoBehaviour
         float val = paintAction.action?.ReadValue<float>() ?? 0f;
         canPaint = val > 0.5f;
     }
-    
-    public void SetBrushColor(Color newColor) {
+
+    // --- Public API for UI ---
+
+    public void SetBrushColor(Color newColor)
+    {
         brushColor = newColor;
     }
 
-    public Color GetBrushColor() {
+    public Color GetBrushColor()
+    {
         return brushColor;
     }
 
+    public void SetBrushSize(float sliderValue01)
+    {
+        brushRadiusUV = Mathf.Lerp(minBrushSize, maxBrushSize, Mathf.Clamp01(sliderValue01));
+    }
+
+    public void SetBrushModeNormal() => currentMode = BrushMode.Normal;
+    public void SetBrushModeErase() => currentMode = BrushMode.Erase;
+    public void SetBrushModeSpray() => currentMode = BrushMode.Spray;
+    public void SetBrushModeBucket() => currentMode = BrushMode.Bucket;
+
+    public void SetBrushMode(int modeIndex)
+    {
+        if (modeIndex >= 0 && modeIndex < System.Enum.GetValues(typeof(BrushMode)).Length)
+            currentMode = (BrushMode)modeIndex;
+    }
+
+    // --- Painting Logic ---
 
     private void OnTriggerStay(Collider other)
     {
         if (!canPaint) return;
         if (!pottery) return;
 
-
         Vector3 origin = rayOrigin.position;
         Vector3 dir = rayOrigin.forward;
 
         if (Physics.Raycast(origin, dir, out RaycastHit hit, raycastDistance, potLayerMask, triggerInteraction))
         {
-            if (hit.collider.GetComponentInParent<Potter>() == pottery)
+            var hitPotter = hit.collider.GetComponentInParent<Potter>();
+            if (hitPotter != pottery) return;
+
+            if (currentMode == BrushMode.Bucket)
             {
-                PaintAtUV(hit.textureCoord);
+                if (Time.time - lastBucketPaintTime > BUCKET_COOLDOWN)
+                {
+                    pottery.ClearPaintTexture(brushColor);
+                    lastBucketPaintTime = Time.time;
+                }
+                return;
             }
-        }
-    }
 
-    private void PaintAtUV(Vector2 uv)
-    {
-        Texture2D tex = pottery.GetPaintTexture();
-        if (tex == null) return;
-
-        int w = tex.width;
-        int h = tex.height;
-
-        float u = uv.x;
-        float v = uv.y;
-        if (u >= 1f) u = 1f - Mathf.Epsilon;
-
-        int centerX = Mathf.RoundToInt(u * w);
-        int centerY = Mathf.RoundToInt(v * h);
-
-        int radiusPixels = Mathf.Max(1, Mathf.RoundToInt(brushRadiusUV * w));
-        Color target = erase ? Color.clear : brushColor;
-
-        DrawDisc(tex, centerX, centerY, radiusPixels, target);
-
-        if (centerX - radiusPixels < 0)
-            DrawDisc(tex, centerX + w, centerY, radiusPixels, target);
-
-        if (centerX + radiusPixels >= w)
-            DrawDisc(tex, centerX - w, centerY, radiusPixels, target);
-
-        tex.Apply();
-    }
-
-    private static void DrawDisc(Texture2D tex, int cx, int cy, int r, Color col)
-    {
-        int w = tex.width;
-        int h = tex.height;
-
-        int xMin = Mathf.Clamp(cx - r, 0, w - 1);
-        int xMax = Mathf.Clamp(cx + r, 0, w - 1);
-        int yMin = Mathf.Clamp(cy - r, 0, h - 1);
-        int yMax = Mathf.Clamp(cy + r, 0, h - 1);
-
-        int r2 = r * r;
-
-        for (int y = yMin; y <= yMax; y++)
-        {
-            int dy = y - cy;
-            for (int x = xMin; x <= xMax; x++)
+            int submeshIndex = 0;
+            if (hit.collider is MeshCollider && pottery.ringsCount > 0 && pottery.faces > 0)
             {
-                int dx = x - cx;
-                if (dx * dx + dy * dy <= r2)
-                    tex.SetPixel(x, y, col);
+                int numQuads = (pottery.faces - 1) * (pottery.ringsCount - 1);
+                int trisPerSubmesh = numQuads * 2;
+                if (hit.triangleIndex >= trisPerSubmesh)
+                {
+                    submeshIndex = 1;
+                }
+            }
+
+            Texture2D tex = pottery.GetPaintTexture(submeshIndex);
+            if (tex == null) return;
+
+            Vector2 pixelUV = hit.textureCoord;
+            
+            int texW = tex.width;
+            int texH = tex.height;
+
+            int centerX = (int)(pixelUV.x * texW);
+            int centerY = (int)(pixelUV.y * texH);
+            
+            int radiusPixels = (int)(brushRadiusUV * texW);
+            int r2 = radiusPixels * radiusPixels;
+
+            bool modified = false;
+
+            Color targetColor = (currentMode == BrushMode.Erase) ? Color.clear : brushColor;
+
+            int xMin = Mathf.Clamp(centerX - radiusPixels, 0, texW - 1);
+            int xMax = Mathf.Clamp(centerX + radiusPixels, 0, texW - 1);
+            int yMin = Mathf.Clamp(centerY - radiusPixels, 0, texH - 1);
+            int yMax = Mathf.Clamp(centerY + radiusPixels, 0, texH - 1);
+
+
+            for (int y = yMin; y <= yMax; y++)
+            {
+                for (int x = xMin; x <= xMax; x++)
+                {
+                    int dx = x - centerX;
+                    int dy = y - centerY;
+
+                    if (dx * dx + dy * dy < r2)
+                    {
+                        if (currentMode == BrushMode.Spray)
+                        {
+                            if (Random.value > sprayDensity) continue;
+                        }
+
+                        tex.SetPixel(x, y, targetColor);
+                        modified = true;
+                    }
+                }
+            }
+            
+            if (centerX - radiusPixels < 0 || centerX + radiusPixels >= texW)
+            {
+                int offset = (centerX < texW / 2) ? texW : -texW;
+                int wrappedCenterX = centerX + offset;
+                
+                int wxMin = Mathf.Clamp(wrappedCenterX - radiusPixels, 0, texW - 1);
+                int wxMax = Mathf.Clamp(wrappedCenterX + radiusPixels, 0, texW - 1);
+
+                for (int y = yMin; y <= yMax; y++)
+                {
+                    for (int x = wxMin; x <= wxMax; x++)
+                    {
+                        int dx = x - wrappedCenterX;
+                        int dy = y - centerY;
+                        if (dx * dx + dy * dy < r2)
+                        {
+                            if (currentMode == BrushMode.Spray && Random.value > sprayDensity) continue;
+                            tex.SetPixel(x, y, targetColor);
+                            modified = true;
+                        }
+                    }
+                }
+            }
+
+            if (modified)
+            {
+                tex.Apply();
             }
         }
     }

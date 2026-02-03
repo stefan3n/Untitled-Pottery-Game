@@ -10,15 +10,20 @@ public class LeftMenuFade : MonoBehaviour
 
     [Header("Pot Settings")]
     public Transform potTransform;
-    public float minDistanceToPot = 0.5f;
+    public float minDistanceToPot = 0.2f;
 
     [Header("Sensitivity")]
     [Range(0f, 1f)]
-    public float activationThreshold = 0.4f;
+    public float activationThreshold = 0.3f;
 
     [Tooltip("The dot product value at which alpha becomes 1.0. Lower this to reach max opacity easier.")]
     [Range(0f, 1f)]
-    public float fullOpacityThreshold = 0.9f;
+    public float fullOpacityThreshold = 0.8f;
+    
+    [Header("Interaction")]
+    [Tooltip("The execution of interaction (clicks/hovers) is disabled below this alpha value.")]
+    [Range(0f, 1f)]
+    public float interactionAlphaThreshold = 0.5f;
 
     public float smoothSpeed = 10f;
 
@@ -39,6 +44,7 @@ public class LeftMenuFade : MonoBehaviour
         if (isTooCloseToPot)
         {
             menuCanvasGroup.alpha = Mathf.Lerp(menuCanvasGroup.alpha, 0f, Time.deltaTime * smoothSpeed);
+            UpdateInteraction();
             return;
         }
 
@@ -55,5 +61,13 @@ public class LeftMenuFade : MonoBehaviour
         }
 
         menuCanvasGroup.alpha = Mathf.Lerp(menuCanvasGroup.alpha, targetAlpha, Time.deltaTime * smoothSpeed);
+        UpdateInteraction();
+    }
+    
+    private void UpdateInteraction()
+    {
+        bool isInteractable = menuCanvasGroup.alpha >= interactionAlphaThreshold;
+        menuCanvasGroup.interactable = isInteractable;
+        menuCanvasGroup.blocksRaycasts = isInteractable;
     }
 }

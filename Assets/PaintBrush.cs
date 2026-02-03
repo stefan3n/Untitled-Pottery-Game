@@ -15,6 +15,7 @@ public class PaintBrush : MonoBehaviour
     [Header("References")]
     [SerializeField] private Potter pottery;
     [SerializeField] private LayerMask potLayerMask = ~0;
+    [SerializeField] private ParticleSystem paintParticles;
 
     [Header("Brush Settings")]
     [SerializeField] private BrushMode currentMode = BrushMode.Normal;
@@ -33,6 +34,9 @@ public class PaintBrush : MonoBehaviour
 
     [Header("Input")]
     [SerializeField] private InputActionProperty paintAction;
+    
+    [Header("Shared Material")] 
+    public Material targetMaterial;
 
     private Collider col;
     private bool canPaint;
@@ -45,6 +49,17 @@ public class PaintBrush : MonoBehaviour
         col = GetComponent<Collider>();
         col.isTrigger = true;
 
+        if (paintParticles)
+        {
+            var main = paintParticles.main;
+            main.startColor = brushColor;
+        }
+
+        if (targetMaterial)
+        {
+            targetMaterial.color = brushColor; 
+        }
+        
         if (rayOrigin == null) rayOrigin = transform;
     }
 
@@ -64,13 +79,33 @@ public class PaintBrush : MonoBehaviour
     {
         float val = paintAction.action?.ReadValue<float>() ?? 0f;
         canPaint = val > 0.5f;
+        
+        if (paintParticles)
+        {
+            if (canPaint && !paintParticles.isPlaying)
+            {
+                paintParticles.Play();
+            }
+            else if (!canPaint && paintParticles.isPlaying)
+            {
+                paintParticles.Stop();
+            }
+        }
     }
-
-    // --- Public API for UI ---
 
     public void SetBrushColor(Color newColor)
     {
         brushColor = newColor;
+        if (paintParticles)
+        {
+            var main = paintParticles.main;
+            main.startColor = newColor;
+        }
+        
+        if (targetMaterial)
+        {
+            targetMaterial.color = newColor; 
+        }
     }
 
     public Color GetBrushColor()
@@ -93,8 +128,6 @@ public class PaintBrush : MonoBehaviour
         if (modeIndex >= 0 && modeIndex < System.Enum.GetValues(typeof(BrushMode)).Length)
             currentMode = (BrushMode)modeIndex;
     }
-
-    // --- Painting Logic ---
 
     private void OnTriggerStay(Collider other)
     {

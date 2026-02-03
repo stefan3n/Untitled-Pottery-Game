@@ -1,26 +1,59 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class LeftMenuFade : MonoBehaviour
 {
     [Header("Assign Your Controller Transform (left hand)")]
     public Transform controllerTransform;
-
+    
     [Header("Assign Your CanvasGroup component (on menu)")]
     public CanvasGroup menuCanvasGroup;
 
-    [Header("Rotation Range")]
-    public float minAngle = 0f;  
-    public float maxAngle = 90f; 
+    [Header("Pot Settings")]
+    public Transform potTransform;
+    public float minDistanceToPot = 0.5f;
+
+    [Header("Sensitivity")]
+    [Range(0f, 1f)]
+    public float activationThreshold = 0.4f;
+
+    [Tooltip("The dot product value at which alpha becomes 1.0. Lower this to reach max opacity easier.")]
+    [Range(0f, 1f)]
+    public float fullOpacityThreshold = 0.9f;
+
+    public float smoothSpeed = 10f;
 
     void Update()
     {
-        float zRot = controllerTransform.localEulerAngles.z;
+        if (!controllerTransform || !menuCanvasGroup) return;
 
-        float angle = Mathf.DeltaAngle(0, zRot); 
-        angle = Mathf.Abs(angle);
+        bool isTooCloseToPot = false;
+        if (potTransform)
+        {
+            float distanceToPot = Vector3.Distance(controllerTransform.position, potTransform.position);
+            if (distanceToPot < minDistanceToPot)
+            {
+                isTooCloseToPot = true;
+            }
+        }
 
-        float t = Mathf.InverseLerp(minAngle, maxAngle, angle);
-        menuCanvasGroup.alpha = Mathf.Clamp01(t);
+        if (isTooCloseToPot)
+        {
+            menuCanvasGroup.alpha = Mathf.Lerp(menuCanvasGroup.alpha, 0f, Time.deltaTime * smoothSpeed);
+            return;
+        }
+
+        Vector3 palmNormal = controllerTransform.right;
+
+        float dotUp = Vector3.Dot(palmNormal, Vector3.up);
+        
+
+        float targetAlpha = 0f;
+
+        if (dotUp > activationThreshold)
+        {
+            targetAlpha = Mathf.InverseLerp(activationThreshold, fullOpacityThreshold, dotUp);
+        }
+
+        menuCanvasGroup.alpha = Mathf.Lerp(menuCanvasGroup.alpha, targetAlpha, Time.deltaTime * smoothSpeed);
     }
 }

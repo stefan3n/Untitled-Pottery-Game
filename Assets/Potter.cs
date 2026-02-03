@@ -31,8 +31,8 @@ public sealed class Potter : MonoBehaviour
     public bool flipUInside = false;
 
     [Header("Radius Limits")]
-    public float minRingRadius = 0.15f;
-    public float maxRingRadius = 0.9f;
+    public float minRingRadius = 0.05f;
+    public float maxRingRadius = 0.8f;
 
     [Header("Painting")]
     [SerializeField] private Material potPaintMaterial;

@@ -23,7 +23,7 @@ public sealed class PotSculptingController : MonoBehaviour
 
     [Header("Pull Settings")]
     [SerializeField] private float pullHeightSpeed = 0.2f;
-    [SerializeField] private float splitThreshold = 0.3f;
+    [SerializeField] private float splitThreshold = 0.15f;
 
     [Header("Selector (ring highlight)")]
     [SerializeField] private GameObject selector;
@@ -82,7 +82,7 @@ public sealed class PotSculptingController : MonoBehaviour
         UpdateHandVisualPosition(leftControllerTransform, leftHandVisual, ref isLeftHandInsidePot);
 
         Vector3 rightParams = rightHandVisual ? rightHandVisual.position : rightControllerTransform.position;
-        Vector3 leftParams = leftHandVisual ? leftHandVisual.position : leftControllerTransform.position;
+        // Vector3 leftParams = leftHandVisual ? leftHandVisual.position : leftControllerTransform.position;
 
         HandleHandHover(rightParams, rightTriggerPressed);
 
@@ -92,7 +92,7 @@ public sealed class PotSculptingController : MonoBehaviour
         // }
 
         HandleHandSculpt(rightControllerTransform, rightParams, rightTriggerPressed, isRightHandInsidePot);
-        HandleHandSculpt(leftControllerTransform, leftParams, leftTriggerPressed, isLeftHandInsidePot);
+        // HandleHandSculpt(leftControllerTransform, leftParams, leftTriggerPressed, isLeftHandInsidePot);
 
         HandleTwoHandPull();
     }
@@ -119,7 +119,7 @@ public sealed class PotSculptingController : MonoBehaviour
             visualTransform.rotation = realTransform.rotation;
             return;
         }
-        else if (localY < bottomY)
+        if (localY < bottomY)
         {
             isInsideState = false;
 

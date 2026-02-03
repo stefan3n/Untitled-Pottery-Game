@@ -21,7 +21,7 @@ public class PaintBrush : MonoBehaviour
     [SerializeField] private Color brushColor = Color.red;
     [SerializeField, Range(0.001f, 0.2f)] private float brushRadiusUV = 0.01f;
     [SerializeField, Range(0.01f, 1f)] private float sprayDensity = 0.1f;
-    [SerializeField] private float raycastDistance = 0.5f;
+    [SerializeField] private float raycastDistance = 0.2f;
 
     [Header("UI Control Limits")]
     [SerializeField] private float minBrushSize = 0.01f;

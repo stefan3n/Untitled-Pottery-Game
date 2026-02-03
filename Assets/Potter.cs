@@ -6,12 +6,12 @@ using System;
 [RequireComponent(typeof(MeshCollider))]
 public sealed class Potter : MonoBehaviour
 {
-    public int faces = 16;
+    public int faces = 100;
 
     [Header("Vertical layout")]
     public float baseRingHeight = 0.05f;
     public float baseRingRadius = 0.3f;
-    public int ringsCount = 12;
+    public int ringsCount = 8;
 
     public float maxPotHeight = 1.2f;
 
@@ -43,6 +43,8 @@ public sealed class Potter : MonoBehaviour
     private Texture2D paintTextureInside;  
     
     private MeshRenderer meshRenderer;
+    
+    private int initialRingsCount;
 
     private bool isModified = false;
 
@@ -52,6 +54,8 @@ public sealed class Potter : MonoBehaviour
 
     void Awake()
     {
+        initialRingsCount = ringsCount;
+        
         mesh = new Mesh();
         mesh.name = "PotMesh";
 
@@ -120,6 +124,25 @@ public sealed class Potter : MonoBehaviour
     {
         isModified = true;
     }
+    
+    public void FullReset()
+    {
+        if (initialRingsCount > 0)
+        {
+            ringsCount = initialRingsCount;
+        }
+
+        ResetPot();
+
+        body = null;
+        GenerateMesh();
+
+        Physics.SyncTransforms();
+
+        SetPaintTexture();
+
+        isModified = false;
+    }
 
     public void SetPaintTexture()
     {
@@ -150,11 +173,13 @@ public sealed class Potter : MonoBehaviour
     private void ResizeAndClear(Texture2D tex, int newHeight)
     {
         if (tex == null) return;
+        
         if (tex.height != newHeight)
         {
             tex.Reinitialize(paintTextureSize, newHeight);
-            ClearTexture(tex, Color.clear);
         }
+        
+        ClearTexture(tex, Color.clear);
     }
 
     private void ClearTexture(Texture2D tex, Color c)
@@ -203,10 +228,10 @@ public sealed class Potter : MonoBehaviour
         Vector2[] uvs = new Vector2[totalVertices];
 
         float totalH = GetTotalHeight();
-        
+
         Array.Copy(vOut, 0, vertices, 0, vertexCountOneSide);
         Array.Copy(nOut, 0, normals, 0, vertexCountOneSide);
-        
+
         for (int i = 0; i < vertexCountOneSide; i++)
         {
             vertices[vertexCountOneSide + i] = vOut[i];
@@ -223,7 +248,7 @@ public sealed class Potter : MonoBehaviour
                 int indexIn = vertexCountOneSide + indexOut;
 
                 float u = (float)x / (faces - 1);
-                
+
                 uvs[indexOut] = new Vector2(u, v);
 
                 float uIn = flipUInside ? (1f - u) : u;
@@ -231,11 +256,12 @@ public sealed class Potter : MonoBehaviour
             }
         }
 
+        mesh.Clear();
+
         mesh.vertices = vertices;
         mesh.normals = normals;
         mesh.uv = uvs;
 
-        // Triangles
         mesh.subMeshCount = 2;
 
         int numQuads = (faces - 1) * (ringsCount - 1);
@@ -252,14 +278,13 @@ public sealed class Potter : MonoBehaviour
                 int tl = (y + 1) * faces + x;
                 int tr = (y + 1) * faces + (x + 1);
 
-                // Outside (CCW)
                 trisOut[t] = bl;
                 trisOut[t + 1] = tl;
                 trisOut[t + 2] = br;
                 trisOut[t + 3] = br;
                 trisOut[t + 4] = tl;
                 trisOut[t + 5] = tr;
-                
+
                 int off = vertexCountOneSide;
                 trisIn[t] = off + bl;
                 trisIn[t + 1] = off + br;

@@ -23,7 +23,7 @@ public sealed class PotSculptingController : MonoBehaviour
 
     [Header("Pull Settings")]
     [SerializeField] private float pullHeightSpeed = 0.2f;
-    [SerializeField] private float splitThreshold = 0.3f;
+    [SerializeField] private float splitThreshold = 0.15f;
 
     [Header("Selector (ring highlight)")]
     [SerializeField] private GameObject selector;

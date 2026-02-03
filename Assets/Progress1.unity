@@ -2747,14 +2747,14 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 572460205}
-  m_LocalRotation: {x: 0.2474193, y: -0.2986087, z: -0.6395779, w: 0.6637444}
-  m_LocalPosition: {x: 0, y: 0, z: 0.013}
+  m_LocalRotation: {x: 0.080875255, y: -0.12446154, z: -0.6809813, w: 0.7171005}
+  m_LocalPosition: {x: 0, y: 0, z: 0.0012}
   m_LocalScale: {x: 0.00018571503, y: 0.00018571498, z: 0.00018571498}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 294243168}
   m_Father: {fileID: 1142910439}
-  m_LocalEulerAnglesHint: {x: 183.068, y: 134.446, z: 93.413}
+  m_LocalEulerAnglesHint: {x: 183.068, y: 163.198, z: 93.413}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0.0547, y: -0.0609}
@@ -6256,7 +6256,8 @@ MonoBehaviour:
   menuCanvasGroup: {fileID: 1142910441}
   potTransform: {fileID: 4654214073552918481}
   minDistanceToPot: 0.2
-  activationThreshold: 0.75
+  activationThreshold: 0.3
+  fullOpacityThreshold: 0.8
   smoothSpeed: 10
 --- !u!225 &1142910441
 CanvasGroup:
@@ -10200,9 +10201,9 @@ MonoBehaviour:
     m_Reference: {fileID: 0}
   pottery: {fileID: 7132265891756064850}
   sculptSpeed: 0.25
-  neighborEffectRange: 5
+  neighborEffectRange: 4
   pullHeightSpeed: 0.2
-  splitThreshold: 0.3
+  splitThreshold: 0.15
   selector: {fileID: 3357135952275855311}
   hoverColor: {r: 0, g: 1, b: 1, a: 0.3}
   activeColor: {r: 0, g: 1, b: 0, a: 0.5}
@@ -14050,8 +14051,8 @@ MonoBehaviour:
   ringHeights: []
   isStatic: 0
   flipUInside: 0
-  minRingRadius: 0.15
-  maxRingRadius: 0.9
+  minRingRadius: 0.05
+  maxRingRadius: 0.8
   potPaintMaterial: {fileID: 2100000, guid: 2a8568a04948ea5839b4e3ce80e113fb, type: 2}
   paintTextureSize: 1024
   paintTextureProperty: _PaintTex

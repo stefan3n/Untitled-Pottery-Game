@@ -1,0 +1,2 @@
+S:\Untitled-Pottery-Game-main\Untitled-Pottery-Game\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\CMakeLists.txt
+S:\Untitled-Pottery-Game-main\Untitled-Pottery-Game\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\CMakeLists.txt

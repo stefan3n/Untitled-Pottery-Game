@@ -1,6 +1,7 @@
-using System.Globalization;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.XR;
 
 public sealed class PotWorkflowController : MonoBehaviour
 {
@@ -9,10 +10,22 @@ public sealed class PotWorkflowController : MonoBehaviour
     [SerializeField] private ShelfManager shelfManager;
     [SerializeField] private TargetManager targetManager;
 
-    [Header("Input")]
+    [Header("UI Feedback")]
+    public NotificationManager notificationManager;
+
+    [Header("Interaction Settings")]
+    [Tooltip("Drag the Right Hand Controller object here")]
+    public Transform rightHandTransform;
+
+    [Tooltip("Set this to 'PotLayer' (or Everything if layers are not set up)")]
+    public LayerMask potLayerMask;
+    public float interactionDistance = 10.0f;
+
+    [Header("Input Actions")]
     [SerializeField] private InputActionProperty saveAction;
-    [SerializeField] private InputActionProperty loadAction;
     [SerializeField] private InputActionProperty submitAction;
+
+    [SerializeField] private InputActionProperty loadAction;
 
     private bool wasSavePressed = false;
     private bool wasLoadPressed = false;
@@ -20,139 +33,123 @@ public sealed class PotWorkflowController : MonoBehaviour
 
     private ShelfPot currentHoveredShelfPot = null;
 
-    private void Start()
+    private List<UnityEngine.XR.InputDevice> inputDevices = new List<UnityEngine.XR.InputDevice>();
+
+    void Update()
     {
-        if (shelfManager == null) Debug.LogError("ShelfManager is missing!");
-        if (pottery == null) Debug.LogError("Main Potter is missing!");
+        HandleRaycastLogic();
+        HandleControllerInput();
     }
 
-    private void OnEnable()
+    private void HandleRaycastLogic()
     {
-        if (saveAction.action != null) saveAction.action.Enable();
-        if (loadAction.action != null) loadAction.action.Enable();
-        if (submitAction.action != null) submitAction.action.Enable();
-    }
+        if (rightHandTransform == null) return;
 
-    private void Update()
-    {
-        HandleSaving();
-        HandleLoading();
-        HandleSubmit();
-        
-        if (Keyboard.current != null && Keyboard.current.pKey.wasPressedThisFrame)
+        RaycastHit hit;
+        if (Physics.Raycast(rightHandTransform.position, rightHandTransform.forward, out hit, interactionDistance, potLayerMask))
         {
-            PrintRadiiToConsole();
-        }
-    }
+            ShelfPot pot = hit.collider.GetComponentInParent<ShelfPot>();
 
-    private void HandleSaving()
-    {
-        float saveValue = saveAction.action?.ReadValue<float>() ?? 0f;
-        bool isSavePressed = saveValue > 0.5f;
-
-        if (isSavePressed && !wasSavePressed)
-        {
-            if (shelfManager != null && pottery != null)
+            if (pot != null)
             {
-                shelfManager.SavePotToShelf(pottery);
+                if (currentHoveredShelfPot != pot)
+                {
+                    if (currentHoveredShelfPot != null) currentHoveredShelfPot.SetHighlight(false);
+                    currentHoveredShelfPot = pot;
+                    currentHoveredShelfPot.SetHighlight(true);
+                }
+            }
+            else
+            {
+                if (currentHoveredShelfPot != null)
+                {
+                    currentHoveredShelfPot.SetHighlight(false);
+                    currentHoveredShelfPot = null;
+                }
             }
         }
-        wasSavePressed = isSavePressed;
+        else
+        {
+            if (currentHoveredShelfPot != null)
+            {
+                currentHoveredShelfPot.SetHighlight(false);
+                currentHoveredShelfPot = null;
+            }
+        }
     }
 
-    private void HandleLoading()
+    public void SavePotByButton()
     {
-        float loadValue = loadAction.action?.ReadValue<float>() ?? 0f;
-        bool isLoadPressed = loadValue > 0.5f;
-
-        if (isLoadPressed && !wasLoadPressed)
+        if (shelfManager != null && pottery != null)
         {
-            if (currentHoveredShelfPot)
+            shelfManager.SavePotToShelf(pottery);
+        }
+    }
+
+    private void HandleControllerInput()
+    {
+        float saveValue = saveAction.action?.ReadValue<float>() ?? 0f;
+        bool isSaveDown = saveValue > 0.5f || (Keyboard.current != null && Keyboard.current.kKey.isPressed);
+
+        if (isSaveDown && !wasSavePressed)
+        {
+            SavePotByButton();
+        }
+        wasSavePressed = isSaveDown;
+
+
+        bool isGripPressedVR = false;
+
+        InputDevices.GetDevicesAtXRNode(XRNode.RightHand, inputDevices);
+
+        if (inputDevices.Count > 0)
+        {
+            UnityEngine.XR.InputDevice rightController = inputDevices[0];
+
+            rightController.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out isGripPressedVR);
+        }
+
+        bool isLoadDown = isGripPressedVR || (Keyboard.current != null && Keyboard.current.mKey.isPressed);
+
+        if (isLoadDown && !wasLoadPressed)
+        {
+            if (currentHoveredShelfPot != null)
             {
                 LoadPotFromShelf(currentHoveredShelfPot);
             }
         }
-        wasLoadPressed = isLoadPressed;
-    }
+        wasLoadPressed = isLoadDown;
 
-    private void HandleSubmit()
-    {
-        float val = submitAction.action?.ReadValue<float>() ?? 0f;
-        bool isPressed = val > 0.5f;
+        float submitVal = submitAction.action?.ReadValue<float>() ?? 0f;
+        bool isSubmitDown = submitVal > 0.5f || (Keyboard.current != null && Keyboard.current.enterKey.isPressed);
 
-        if (isPressed && !wasSubmitPressed)
+        if (isSubmitDown && !wasSubmitPressed)
         {
-            if (targetManager)
-            {
-                targetManager.EvaluateAndShowResult();
-            }
+            if (targetManager) targetManager.EvaluateAndShowResult();
         }
-        wasSubmitPressed = isPressed;
+        wasSubmitPressed = isSubmitDown;
     }
 
     private void LoadPotFromShelf(ShelfPot shelfPot)
     {
-        Debug.Log("Loading pot from shelf");
+        Debug.Log($"Loading pot from slot {shelfPot.ShelfSlotIndex}...");
 
-        float[] newData = shelfPot.GetData();
-
-        pottery.SetRadiiData(newData);
+        pottery.LoadPotData(
+            shelfPot.GetRadii(),
+            shelfPot.GetHeights(),
+            shelfPot.GetTextureOutside(),
+            shelfPot.GetTextureInside(),
+            shelfPot.WasPainted
+        );
 
         shelfManager.FreeSlot(shelfPot.ShelfSlotIndex);
-
         shelfPot.SetHighlight(false);
         Destroy(shelfPot.gameObject);
-
         currentHoveredShelfPot = null;
-    }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        ShelfPot hitPot = other.GetComponent<ShelfPot>();
-        if (hitPot != null)
+        if (notificationManager != null)
         {
-            if (currentHoveredShelfPot != null)
-                currentHoveredShelfPot.SetHighlight(false);
-
-            currentHoveredShelfPot = hitPot;
-            currentHoveredShelfPot.SetHighlight(true);
+            notificationManager.ShowNotification("Pot Loaded!");
         }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        ShelfPot hitPot = other.GetComponent<ShelfPot>();
-        if (hitPot != null && hitPot == currentHoveredShelfPot)
-        {
-            currentHoveredShelfPot.SetHighlight(false);
-            currentHoveredShelfPot = null;
-        }
-    }
-    
-    private void PrintRadiiToConsole()
-    {
-        if (!pottery) return;
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
-        sb.Append("new float[] { ");
-
-        for (int i = 0; i < pottery.ringsRadius.Length; i++)
-        {
-            float val = pottery.ringsRadius[i];
-            string valString = val.ToString("F2", CultureInfo.InvariantCulture);
-
-            sb.Append(valString + "f");
-
-            if (i < pottery.ringsRadius.Length - 1)
-            {
-                sb.Append(", ");
-            }
-        }
-
-        sb.Append(" };");
-
-        Debug.Log("Copy");
-        Debug.Log(sb.ToString());
     }
 }

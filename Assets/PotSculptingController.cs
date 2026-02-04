@@ -82,18 +82,14 @@ public sealed class PotSculptingController : MonoBehaviour
         UpdateHandVisualPosition(leftControllerTransform, leftHandVisual, ref isLeftHandInsidePot);
 
         Vector3 rightParams = rightHandVisual ? rightHandVisual.position : rightControllerTransform.position;
-        // Vector3 leftParams = leftHandVisual ? leftHandVisual.position : leftControllerTransform.position;
 
+        // Logica de vizualizare (Hover)
         HandleHandHover(rightParams, rightTriggerPressed);
 
-        // if (selector.activeSelf == false)
-        // {
-        //      HandleHandHover(leftParams, leftTriggerPressed);
-        // }
-
+        // Logica de sculptare (modificare raza)
         HandleHandSculpt(rightControllerTransform, rightParams, rightTriggerPressed, isRightHandInsidePot);
-        // HandleHandSculpt(leftControllerTransform, leftParams, leftTriggerPressed, isLeftHandInsidePot);
 
+        // Logica de inaltare (Pull)
         HandleTwoHandPull();
     }
 
@@ -170,6 +166,14 @@ public sealed class PotSculptingController : MonoBehaviour
             return;
         }
 
+        // --- MODIFICARE 1: Daca geometria e blocata, ascundem selectorul ---
+        if (pottery.IsGeometryLocked)
+        {
+            HideSelector();
+            return;
+        }
+        // -------------------------------------------------------------------
+
         Vector3 local = pottery.transform.InverseTransformPoint(handPosition);
 
         int ringIndex = GetRingIndexFromLocalY(local.y);
@@ -187,7 +191,7 @@ public sealed class PotSculptingController : MonoBehaviour
         if (distanceToSurface > (selectorRadiusTolerance + handRadiusCollision + 0.1f))
         {
             HideSelector();
-             return;
+            return;
         }
 
         selectedRing = ringIndex;
@@ -196,9 +200,16 @@ public sealed class PotSculptingController : MonoBehaviour
 
     private void HandleHandSculpt(Transform realTransform, Vector3 visualPosition, bool isTriggerPressed, bool isInside)
     {
+        // Validari initiale
+        if (!pottery) return;
+
+        // --- MODIFICARE 2: Blocare Sculptare ---
+        if (pottery.IsGeometryLocked) return;
+        // ---------------------------------------
+
         if (!rotatePot || !rotatePot.IsRotating()) return;
         if (!isTriggerPressed) return;
-        if (!pottery || pottery.ringHeights == null || pottery.ringsCount == 0) return;
+        if (pottery.ringHeights == null || pottery.ringsCount == 0) return;
 
         Vector3 localPoint = pottery.transform.InverseTransformPoint(visualPosition);
 
@@ -241,8 +252,8 @@ public sealed class PotSculptingController : MonoBehaviour
 
         float deltaBase = direction * baseSpeed * Time.deltaTime;
 
-        int range = neighborEffectRange; 
-        float sigma = 2.0f; 
+        int range = neighborEffectRange;
+        float sigma = 2.0f;
 
         for (int i = -range; i <= range; i++)
         {
@@ -250,13 +261,13 @@ public sealed class PotSculptingController : MonoBehaviour
             if (targetIndex < 0 || targetIndex >= pottery.ringsCount) continue;
 
             float dist = Mathf.Abs(i);
-            
+
             float weight = Mathf.Exp(-(dist * dist) / (2f * sigma * sigma));
-            
+
             float ringCurrentRadius = pottery.ringsRadius[targetIndex];
             float newRadius = ringCurrentRadius + deltaBase * weight;
             newRadius = Mathf.Clamp(newRadius, pottery.minRingRadius, pottery.maxRingRadius);
-            
+
             pottery.ringsRadius[targetIndex] = newRadius;
         }
 
@@ -265,7 +276,17 @@ public sealed class PotSculptingController : MonoBehaviour
 
     private void HandleTwoHandPull()
     {
-        if (!pottery || pottery.ringHeights == null || pottery.ringsCount < 2)
+        if (!pottery) return;
+
+        // --- MODIFICARE 3: Blocare Pulling (Inaltare) ---
+        if (pottery.IsGeometryLocked)
+        {
+            isPulling = false;
+            return;
+        }
+        // ------------------------------------------------
+
+        if (pottery.ringHeights == null || pottery.ringsCount < 2)
             return;
 
         // if (!leftTriggerPressed || !rightTriggerPressed)

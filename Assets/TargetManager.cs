@@ -1,6 +1,6 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem; 
+using UnityEngine.InputSystem;
 
 public class TargetManager : MonoBehaviour
 {
@@ -15,8 +15,30 @@ public class TargetManager : MonoBehaviour
     [Header("Level Data")]
     public LevelData currentLevel;
 
+    [Header("Input")]
+    [Tooltip("Butonul de pe controller pentru a da Restart la final (ex: Trigger sau A)")]
+    public InputActionProperty restartAction;
+
+    [Header("Difficulty Settings")]
+    [Tooltip("90% => 100% score")]
+    [Range(0.8f, 1.0f)]
+    public float completionThreshold = 0.90f;
+
+    // Raza default a vasului 
+    private const float DEFAULT_START_RADIUS = 0.3f;
+
     // Stare interna: false = jucam, true = vedem rezultatul
     private bool isShowingResult = false;
+
+    private void OnEnable()
+    {
+        if (restartAction.action != null) restartAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (restartAction.action != null) restartAction.action.Disable();
+    }
 
     private void Start()
     {
@@ -27,7 +49,6 @@ public class TargetManager : MonoBehaviour
                 targetPotDisplay.GetComponent<Rigidbody>().isKinematic = true;
         }
 
-        // Mesajul e ascund la inceput
         if (resultPanel != null) resultPanel.SetActive(false);
 
         if (currentLevel != null)
@@ -42,76 +63,82 @@ public class TargetManager : MonoBehaviour
 
         if (targetPotDisplay == null) return;
 
-        targetPotDisplay.SetRadiiData(level.targetRadii);
-        targetPotDisplay.GenerateMesh();
+        float[] heights = targetPotDisplay.GetHeightsData();
+
+        if (heights == null || heights.Length != level.targetRadii.Length)
+        {
+            heights = new float[level.targetRadii.Length];
+            for (int i = 0; i < heights.Length; i++)
+            {
+                heights[i] = i * targetPotDisplay.baseRingHeight;
+            }
+        }
+
+        // Incarcam datele (false la final pentru geometry lock)
+        targetPotDisplay.LoadPotData(level.targetRadii, heights, null, null, false);
     }
 
     public void EvaluateAndShowResult()
     {
-        if (isShowingResult) return; 
+        if (isShowingResult) return;
 
         float accuracy = CalculateAccuracy();
 
-        // Afisez UI-ul
         if (resultPanel != null && resultText != null)
         {
             resultPanel.SetActive(true);
-            resultText.text = $"Accuracy: {(accuracy * 100):F0}%\n<size=70%>- press any key to restart -</size>";
+            resultText.text = $"Accuracy: {(accuracy * 100):F0}%\n<size=70%>- press Trigger/A to restart -</size>";
         }
 
         isShowingResult = true;
-        Debug.Log($"Evalation finished. Accuracy: {accuracy}");
+        Debug.Log($"Evaluation finished. Accuracy: {accuracy}");
     }
 
     public void RestartGame()
     {
-        // Ascund UI-ul
         if (resultPanel != null) resultPanel.SetActive(false);
 
-        // Resetez vasul
+        // --- FIX AICI: Am inlocuit FullReset() cu ResetPot() ---
         if (playerPot != null) playerPot.ResetPot();
 
         isShowingResult = false;
         Debug.Log("Game restarted.");
     }
 
-    [Header("Difficulty Settings")]
-    [Tooltip("90% => 100% score")]
-    [Range(0.8f, 1.0f)]
-    public float completionThreshold = 0.90f; 
-
-    // Raza default a vasului 
-    private const float DEFAULT_START_RADIUS = 0.5f;
-
     public float CalculateAccuracy()
     {
         if (playerPot == null || currentLevel == null) return 0f;
-        if (playerPot.ringsRadius.Length != currentLevel.targetRadii.Length) return 0f;
+
+        float[] playerRadii = playerPot.ringsRadius;
+        float[] targetRadii = currentLevel.targetRadii;
+
+        int minLength = Mathf.Min(playerRadii.Length, targetRadii.Length);
+        int maxLength = Mathf.Max(playerRadii.Length, targetRadii.Length);
 
         float totalInitialDiff = 0f;
         float totalCurrentDiff = 0f;
 
-        int ringCount = playerPot.ringsRadius.Length;
-
-        for (int i = 0; i < ringCount; i++)
+        for (int i = 0; i < minLength; i++)
         {
-            float targetR = currentLevel.targetRadii[i];
-            float playerR = playerPot.ringsRadius[i];
+            float targetR = targetRadii[i];
+            float playerR = playerRadii[i];
 
-            // Cat de gresit e vasul daca nu este modificat
             totalInitialDiff += Mathf.Abs(DEFAULT_START_RADIUS - targetR);
-
-            // Cat de gresit e vasul acum
             totalCurrentDiff += Mathf.Abs(playerR - targetR);
         }
 
-        if (totalInitialDiff < 0.001f) return 1.0f;
+        if (maxLength > minLength)
+        {
+            float penaltyPerRing = 0.1f;
+            totalCurrentDiff += (maxLength - minLength) * penaltyPerRing;
+        }
+
+        if (totalInitialDiff < 0.001f) totalInitialDiff = 1f;
 
         float errorRatio = totalCurrentDiff / totalInitialDiff;
-
         float score = 1.0f - errorRatio;
 
-        score = Mathf.Max(0f, score);
+        score = Mathf.Clamp01(score);
 
         if (score >= completionThreshold)
         {
@@ -131,7 +158,10 @@ public class TargetManager : MonoBehaviour
                 return;
             }
 
-            // AICI ADAUGAM SI PENTRU ORICE TASTA DE PE CONTROLLER
+            if (restartAction.action != null && restartAction.action.WasPressedThisFrame())
+            {
+                RestartGame();
+            }
         }
     }
 }

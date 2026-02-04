@@ -1,3 +1,4 @@
+// nu mai e folosit
 using UnityEngine;
 using UnityEngine.SceneManagement;
 

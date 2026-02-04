@@ -10,6 +10,9 @@ public sealed class PotWorkflowController : MonoBehaviour
     [SerializeField] private ShelfManager shelfManager;
     [SerializeField] private TargetManager targetManager;
 
+    [Header("UI Feedback")]
+    public NotificationManager notificationManager;
+
     [Header("Interaction Settings")]
     [Tooltip("Drag the Right Hand Controller object here")]
     public Transform rightHandTransform;
@@ -22,7 +25,6 @@ public sealed class PotWorkflowController : MonoBehaviour
     [SerializeField] private InputActionProperty saveAction;
     [SerializeField] private InputActionProperty submitAction;
 
-    // Lasam variabila ca sa nu crape inspectorul, dar o ignoram pentru functionalitatea Load
     [SerializeField] private InputActionProperty loadAction;
 
     private bool wasSavePressed = false;
@@ -31,7 +33,6 @@ public sealed class PotWorkflowController : MonoBehaviour
 
     private ShelfPot currentHoveredShelfPot = null;
 
-    // Lista explicita UnityEngine.XR
     private List<UnityEngine.XR.InputDevice> inputDevices = new List<UnityEngine.XR.InputDevice>();
 
     void Update()
@@ -87,7 +88,6 @@ public sealed class PotWorkflowController : MonoBehaviour
 
     private void HandleControllerInput()
     {
-        // --- SAVE (Input System SAU Tasta K) ---
         float saveValue = saveAction.action?.ReadValue<float>() ?? 0f;
         bool isSaveDown = saveValue > 0.5f || (Keyboard.current != null && Keyboard.current.kKey.isPressed);
 
@@ -97,24 +97,18 @@ public sealed class PotWorkflowController : MonoBehaviour
         }
         wasSavePressed = isSaveDown;
 
-        // --- LOAD (HARDCODED VR GRIP + Tasta M) ---
 
         bool isGripPressedVR = false;
 
-        // 1. Cerem sistemului XR toate dispozitivele Right Hand
         InputDevices.GetDevicesAtXRNode(XRNode.RightHand, inputDevices);
 
-        // 2. Daca am gasit controllerul drept
         if (inputDevices.Count > 0)
         {
             UnityEngine.XR.InputDevice rightController = inputDevices[0];
 
-            // 3. Citim direct butonul GRIP (Folosind explicit UnityEngine.XR.CommonUsages)
-            // --- FIX AICI: UnityEngine.XR.CommonUsages ---
             rightController.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out isGripPressedVR);
         }
 
-        // Combinam: E apasat Grip-ul VR SAU tasta M?
         bool isLoadDown = isGripPressedVR || (Keyboard.current != null && Keyboard.current.mKey.isPressed);
 
         if (isLoadDown && !wasLoadPressed)
@@ -126,7 +120,6 @@ public sealed class PotWorkflowController : MonoBehaviour
         }
         wasLoadPressed = isLoadDown;
 
-        // --- SUBMIT (Input System SAU Enter) ---
         float submitVal = submitAction.action?.ReadValue<float>() ?? 0f;
         bool isSubmitDown = submitVal > 0.5f || (Keyboard.current != null && Keyboard.current.enterKey.isPressed);
 
@@ -153,5 +146,10 @@ public sealed class PotWorkflowController : MonoBehaviour
         shelfPot.SetHighlight(false);
         Destroy(shelfPot.gameObject);
         currentHoveredShelfPot = null;
+
+        if (notificationManager != null)
+        {
+            notificationManager.ShowNotification("Pot Loaded!");
+        }
     }
 }

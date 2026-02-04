@@ -82,17 +82,18 @@ public sealed class PotSculptingController : MonoBehaviour
         UpdateHandVisualPosition(leftControllerTransform, leftHandVisual, ref isLeftHandInsidePot);
 
         Vector3 rightParams = rightHandVisual ? rightHandVisual.position : rightControllerTransform.position;
+<<<<<<< Updated upstream
         Vector3 leftParams = leftHandVisual ? leftHandVisual.position : leftControllerTransform.position;
+=======
+>>>>>>> Stashed changes
 
         HandleHandHover(rightParams, rightTriggerPressed);
 
-        // if (selector.activeSelf == false)
-        // {
-        //      HandleHandHover(leftParams, leftTriggerPressed);
-        // }
-
         HandleHandSculpt(rightControllerTransform, rightParams, rightTriggerPressed, isRightHandInsidePot);
+<<<<<<< Updated upstream
         HandleHandSculpt(leftControllerTransform, leftParams, leftTriggerPressed, isLeftHandInsidePot);
+=======
+>>>>>>> Stashed changes
 
         HandleTwoHandPull();
     }
@@ -170,6 +171,12 @@ public sealed class PotSculptingController : MonoBehaviour
             return;
         }
 
+        if (pottery.IsGeometryLocked)
+        {
+            HideSelector();
+            return;
+        }
+
         Vector3 local = pottery.transform.InverseTransformPoint(handPosition);
 
         int ringIndex = GetRingIndexFromLocalY(local.y);
@@ -187,7 +194,7 @@ public sealed class PotSculptingController : MonoBehaviour
         if (distanceToSurface > (selectorRadiusTolerance + handRadiusCollision + 0.1f))
         {
             HideSelector();
-             return;
+            return;
         }
 
         selectedRing = ringIndex;
@@ -196,9 +203,13 @@ public sealed class PotSculptingController : MonoBehaviour
 
     private void HandleHandSculpt(Transform realTransform, Vector3 visualPosition, bool isTriggerPressed, bool isInside)
     {
+        if (!pottery) return;
+
+        if (pottery.IsGeometryLocked) return;
+
         if (!rotatePot || !rotatePot.IsRotating()) return;
         if (!isTriggerPressed) return;
-        if (!pottery || pottery.ringHeights == null || pottery.ringsCount == 0) return;
+        if (pottery.ringHeights == null || pottery.ringsCount == 0) return;
 
         Vector3 localPoint = pottery.transform.InverseTransformPoint(visualPosition);
 
@@ -241,8 +252,8 @@ public sealed class PotSculptingController : MonoBehaviour
 
         float deltaBase = direction * baseSpeed * Time.deltaTime;
 
-        int range = neighborEffectRange; 
-        float sigma = 2.0f; 
+        int range = neighborEffectRange;
+        float sigma = 2.0f;
 
         for (int i = -range; i <= range; i++)
         {
@@ -250,13 +261,13 @@ public sealed class PotSculptingController : MonoBehaviour
             if (targetIndex < 0 || targetIndex >= pottery.ringsCount) continue;
 
             float dist = Mathf.Abs(i);
-            
+
             float weight = Mathf.Exp(-(dist * dist) / (2f * sigma * sigma));
-            
+
             float ringCurrentRadius = pottery.ringsRadius[targetIndex];
             float newRadius = ringCurrentRadius + deltaBase * weight;
             newRadius = Mathf.Clamp(newRadius, pottery.minRingRadius, pottery.maxRingRadius);
-            
+
             pottery.ringsRadius[targetIndex] = newRadius;
         }
 
@@ -265,10 +276,17 @@ public sealed class PotSculptingController : MonoBehaviour
 
     private void HandleTwoHandPull()
     {
-        if (!pottery || pottery.ringHeights == null || pottery.ringsCount < 2)
+        if (!pottery) return;
+
+        if (pottery.IsGeometryLocked)
+        {
+            isPulling = false;
+            return;
+        }
+
+        if (pottery.ringHeights == null || pottery.ringsCount < 2)
             return;
 
-        // if (!leftTriggerPressed || !rightTriggerPressed)
         if (!rightTriggerPressed)
         {
             isPulling = false;

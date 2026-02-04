@@ -200,7 +200,6 @@ public sealed class PotSculptingController : MonoBehaviour
 
     private void HandleHandSculpt(Transform realTransform, Vector3 visualPosition, bool isTriggerPressed, bool isInside)
     {
-        // Validari initiale
         if (!pottery) return;
 
         // --- MODIFICARE 2: Blocare Sculptare ---

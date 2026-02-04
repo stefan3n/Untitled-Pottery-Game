@@ -1,0 +1,17 @@
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\GAToUnityCallbacks.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\MacroEnd.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\MacroHeaderBegin.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\MacroSourceBegin.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGAApplication.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGAConfiguration.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGADebug.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGAEvents.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGAInput.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGASoftKeyboard.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGASoftKeyboardCallbacks.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGATypes.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UGAVersion.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UnityToGACallbacks.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UnityToGAConfigurationCallbacks.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UnityToGAKeyEventCallbacks.h
+S:\Untitled-Pottery-Game-CuSaveSiMeniu\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\UnityToGAMotionEventCallbacks.h

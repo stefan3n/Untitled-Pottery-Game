@@ -1,0 +1,10 @@
+# ninja log v5
+29	2706	7919327137805195	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	90b8784f13be939e
+38	2716	7919327137833238	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	b0954463172d6acb
+0	2760	7919327138438230	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	3cd26e169151e1b2
+74	2801	7919327138767749	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	d4f581f733b68b9f
+10	2908	7919327139891552	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	27b9e29ee053a8b8
+48	3213	7919327142962038	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	38772c6eb75542ac
+61	3257	7919327143418905	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	735c1c9671f76cc4
+19	3445	7919327145325351	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	d5afe948e5b3071e
+3445	3638	7919327147330673	S:/Untitled-Pottery-Game-CuSaveSiMeniu/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/21124w5c/obj/arm64-v8a/libgame.so	3eed35333b99d71a

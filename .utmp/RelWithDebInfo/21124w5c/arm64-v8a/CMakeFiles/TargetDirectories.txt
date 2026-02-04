@@ -1,0 +1,5 @@
+S:/Untitled-Pottery-Game-CuSaveSiMeniu/.utmp/RelWithDebInfo/21124w5c/arm64-v8a/CMakeFiles/edit_cache.dir
+S:/Untitled-Pottery-Game-CuSaveSiMeniu/.utmp/RelWithDebInfo/21124w5c/arm64-v8a/CMakeFiles/rebuild_cache.dir
+S:/Untitled-Pottery-Game-CuSaveSiMeniu/.utmp/RelWithDebInfo/21124w5c/arm64-v8a/GameActivity/CMakeFiles/game.dir
+S:/Untitled-Pottery-Game-CuSaveSiMeniu/.utmp/RelWithDebInfo/21124w5c/arm64-v8a/GameActivity/CMakeFiles/edit_cache.dir
+S:/Untitled-Pottery-Game-CuSaveSiMeniu/.utmp/RelWithDebInfo/21124w5c/arm64-v8a/GameActivity/CMakeFiles/rebuild_cache.dir

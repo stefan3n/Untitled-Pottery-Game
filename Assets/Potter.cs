@@ -15,11 +15,9 @@ public sealed class Potter : MonoBehaviour
 
     public float maxPotHeight = 1.2f;
 
-    // --- LINIILE ADAUGATE CARE LIPSEAU ---
     [Header("Radius Limits")]
     public float minRingRadius = 0.05f;
     public float maxRingRadius = 0.8f;
-    // -------------------------------------
 
     [HideInInspector] public float[] ringsRadius;
     [HideInInspector] public float[] ringHeights;
@@ -27,7 +25,6 @@ public sealed class Potter : MonoBehaviour
     [Header("State")]
     public bool isStatic = false;
 
-    // NOU: Daca e true, nu permiti deformarea
     public bool IsGeometryLocked = false;
 
     private float[] defaultRadius;
@@ -46,27 +43,23 @@ public sealed class Potter : MonoBehaviour
 
     private MeshRenderer meshRenderer;
     private MeshFilter meshFilter;
-    private MeshCollider meshCollider;
     private int initialRingsCount;
     private bool isModified = false;
 
     Mesh mesh;
     Body body;
-
+    MeshCollider meshCollider;
     void Awake()
     {
         initialRingsCount = ringsCount;
-
+        
         mesh = new Mesh();
         mesh.name = "PotMesh";
-        mesh.MarkDynamic();
 
         meshFilter = GetComponent<MeshFilter>();
         meshFilter.mesh = mesh;
-        meshRenderer = GetComponent<MeshRenderer>();
-        meshCollider = GetComponent<MeshCollider>();
 
-        // Setup Materiale
+        meshRenderer = GetComponent<MeshRenderer>();
         if (potPaintMaterial != null)
         {
             meshRenderer.materials = new[]
@@ -76,37 +69,42 @@ public sealed class Potter : MonoBehaviour
             };
         }
 
-        // Setup Texturi
         paintTexture = CreatePaintTexture();
         paintTextureInside = CreatePaintTexture();
-        ApplyTexturesToMaterials();
+        
+        var mats = meshRenderer.materials;
 
-        // Initializare Geometrie
-        bool needsInit = (ringsRadius == null || ringsRadius.Length != ringsCount || ringHeights == null || ringHeights.Length != ringsCount);
-
-        if (needsInit)
+        if (mats.Length > 0 && mats[0] != null && mats[0].HasProperty(paintTextureProperty))
         {
-            ringsRadius = new float[ringsCount];
-            ringHeights = new float[ringsCount];
-            for (int i = 0; i < ringsCount; i++)
-            {
-                ringsRadius[i] = baseRingRadius;
-                ringHeights[i] = i * baseRingHeight;
-            }
+            mats[0].SetTexture(paintTextureProperty, paintTexture);
         }
 
-        defaultRadius = (float[])ringsRadius.Clone();
-        defaultRingHeights = (float[])ringHeights.Clone();
+        if (mats.Length > 1 && mats[1] != null && mats[1].HasProperty(paintTextureProperty))
+        {
+            mats[1].SetTexture(paintTextureProperty, paintTextureInside);
+        }
 
-        GenerateMesh();
+        meshRenderer.materials = mats;
+        
+        meshCollider = GetComponent<MeshCollider>();
+
+        if (ringsRadius == null || ringsRadius.Length != ringsCount)
+        {
+            ResetPot();
+        }
     }
-
-    // --- METODE UTILS ---
 
     private Texture2D CreatePaintTexture()
     {
         var tex = new Texture2D(paintTextureSize, paintTextureSize, TextureFormat.RGBA32, false);
-        ClearTexture(tex, Color.clear);
+        
+        var fill = Color.clear;
+        var fills = new Color[paintTextureSize * paintTextureSize];
+        for (int i = 0; i < fills.Length; i++)
+            fills[i] = fill;
+        
+        tex.SetPixels(fills);
+        tex.Apply();
         return tex;
     }
 
@@ -118,6 +116,25 @@ public sealed class Potter : MonoBehaviour
         meshRenderer.materials = mats;
     }
 
+    public void FullReset()
+    {
+        if (initialRingsCount > 0)
+        {
+            ringsCount = initialRingsCount;
+        }
+
+        ResetPot();
+
+        body = null;
+        GenerateMesh();
+
+        Physics.SyncTransforms();
+
+        SetPaintTexture();
+
+        isModified = false;
+    }
+    
     public Texture2D GetPaintTexture(int submeshIndex = 0)
     {
         return submeshIndex == 1 ? paintTextureInside : paintTexture;
@@ -125,7 +142,7 @@ public sealed class Potter : MonoBehaviour
 
     private void ClearTexture(Texture2D tex, Color c)
     {
-        if (tex == null) return;
+        if (!tex) return;
         var cols = tex.GetPixels();
         for (int i = 0; i < cols.Length; ++i) cols[i] = c;
         tex.SetPixels(cols);
@@ -142,41 +159,54 @@ public sealed class Potter : MonoBehaviour
     {
         float h = GetTotalHeight();
         float avgRadius = 0f;
-        for (int i = 0; i < ringsCount; i++) avgRadius += ringsRadius[i];
-        if (ringsCount > 0) avgRadius /= ringsCount;
+        if (ringsRadius != null && ringsCount > 0)
+        {
+            for (int i = 0; i < ringsCount; i++)
+            {
+                avgRadius += ringsRadius[i];
+            }
+            avgRadius /= ringsCount;
+        }
 
         float circumference = 2f * Mathf.PI * avgRadius;
+
         if (circumference > 0.0001f)
         {
             int newHeight = Mathf.RoundToInt(paintTextureSize * (h / circumference));
             newHeight = Mathf.Clamp(newHeight, 16, 8192);
 
-            if (paintTexture.height != newHeight) paintTexture.Reinitialize(paintTextureSize, newHeight);
-            if (paintTextureInside.height != newHeight) paintTextureInside.Reinitialize(paintTextureSize, newHeight);
+            ResizeAndClear(paintTexture, newHeight);
+            ResizeAndClear(paintTextureInside, newHeight);
         }
     }
+    
+    private void ResizeAndClear(Texture2D tex, int newHeight)
+    {
+        if (tex == null) return;
+        
+        if (tex.height != newHeight)
+        {
+            tex.Reinitialize(paintTextureSize, newHeight);
+        }
+        
+        ClearTexture(tex, Color.clear);
+    }
 
-    // --- CHECK PAINTED ---
     public bool CheckIfPainted()
     {
-        if (paintTexture == null) return false;
+        if (!paintTexture) return false;
         Color[] pixels = paintTexture.GetPixels();
-        // Verificam din 20 in 20 de pixeli pentru viteza
         for (int i = 0; i < pixels.Length; i += 20)
         {
             if (pixels[i].a > 0.05f) return true; // Daca gasim ceva opac, e pictat
         }
         return false;
     }
-
-    // --- LOAD & RESET ---
-
+    
     public void LoadPotData(float[] newRadii, float[] newHeights, Texture2D newTexOut, Texture2D newTexIn, bool shouldLockGeometry)
     {
-        // Setam Lock-ul
         IsGeometryLocked = shouldLockGeometry;
 
-        // 1. Geometrie
         if (newRadii != null && newHeights != null)
         {
             ringsCount = newRadii.Length;
@@ -185,23 +215,16 @@ public sealed class Potter : MonoBehaviour
             body = null;
             GenerateMesh();
         }
-
-        // 2. Texturi - FIX PENTRU REINITIALIZE
-        // Verificam si redimensionam texturile inainte de copiere
-
-        // --- Exterior ---
-        if (newTexOut != null)
+        
+        if (newTexOut)
         {
-            // Daca textura nu exista, o cream
-            if (paintTexture == null) paintTexture = CreatePaintTexture();
+            if (paintTexture) paintTexture = CreatePaintTexture();
 
-            // Daca dimensiunile difera, facem resize la destinatie ca sa fie identica cu sursa
             if (paintTexture.width != newTexOut.width || paintTexture.height != newTexOut.height)
             {
                 paintTexture.Reinitialize(newTexOut.width, newTexOut.height);
             }
 
-            // Acum putem copia in siguranta
             Graphics.CopyTexture(newTexOut, paintTexture);
         }
         else
@@ -209,10 +232,9 @@ public sealed class Potter : MonoBehaviour
             ClearTexture(paintTexture, Color.clear);
         }
 
-        // --- Interior ---
-        if (newTexIn != null)
+        if (newTexIn)
         {
-            if (paintTextureInside == null) paintTextureInside = CreatePaintTexture();
+            if (!paintTextureInside) paintTextureInside = CreatePaintTexture();
 
             if (paintTextureInside.width != newTexIn.width || paintTextureInside.height != newTexIn.height)
             {
@@ -226,13 +248,11 @@ public sealed class Potter : MonoBehaviour
             ClearTexture(paintTextureInside, Color.clear);
         }
 
-        // Optional: Recalculam aspect ratio daca e cazul, dar Reinitialize de mai sus rezolva deja problema
-        // SetPaintTexture(); 
     }
 
     public void ResetPot()
     {
-        IsGeometryLocked = false; // Deblocam cand incepem de la zero
+        IsGeometryLocked = false;
 
         if (initialRingsCount > 0) ringsCount = initialRingsCount;
         ringsRadius = new float[ringsCount];
@@ -283,7 +303,7 @@ public sealed class Potter : MonoBehaviour
 
     public void InsertRingBetween(int lowerIndex, int upperIndex)
     {
-        if (IsGeometryLocked) return; // Dubla protectie
+        if (IsGeometryLocked) return;
 
         if (lowerIndex < 0 || upperIndex >= ringsCount || (upperIndex - lowerIndex) != 1) return;
 
@@ -294,18 +314,15 @@ public sealed class Potter : MonoBehaviour
         float avgH = (ringHeights[lowerIndex] + ringHeights[upperIndex]) * 0.5f;
         float avgR = (ringsRadius[lowerIndex] + ringsRadius[upperIndex]) * 0.5f;
 
-        // Copiere partea de jos
         for (int i = 0; i <= lowerIndex; i++)
         {
             newR[i] = ringsRadius[i];
             newH[i] = ringHeights[i];
         }
 
-        // Inserare inel nou
         newR[lowerIndex + 1] = avgR;
         newH[lowerIndex + 1] = avgH;
-
-        // Copiere partea de sus
+        
         for (int i = upperIndex; i < ringsCount; i++)
         {
             newR[i + 1] = ringsRadius[i];
@@ -393,9 +410,8 @@ public sealed class Potter : MonoBehaviour
         mesh.SetTriangles(trisIn, 1);
         mesh.RecalculateBounds();
 
-        // --- PHYSICS FIX ---
-        if (meshCollider == null) meshCollider = GetComponent<MeshCollider>();
-        if (meshCollider != null)
+        if (!meshCollider) meshCollider = GetComponent<MeshCollider>();
+        if (meshCollider)
         {
             meshCollider.sharedMesh = null;
             meshCollider.sharedMesh = mesh;

@@ -14,9 +14,18 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
-  - enabled: 1
+  - enabled: 0
     path: Assets/Progress1.unity
     guid: 7adabd30a39ea0112abd56fae01f1126
+  - enabled: 0
+    path: Assets/Scenes/1 Start Scene.unity
+    guid: b021b6180daa73947bdfcc804cc4fe44
+  - enabled: 1
+    path: Assets/ExploreMode.unity
+    guid: 168f69872ac43da41b37b5730cf551ce
+  - enabled: 0
+    path: Assets/JourneyMode.unity
+    guid: 3b5cdb8705866be4cbf01cf9c886bece
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 4bbfe02f648f01f1f9866fa5f2fdfae1, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public class WheelButtonController : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI buttonText;
+    [SerializeField] private AudioSource audioSource;
     private bool isWheelSpinning = false;
 
     private const string START_TEXT = "Start Wheel";
@@ -25,6 +26,14 @@ public class WheelButtonController : MonoBehaviour
         if (buttonText != null)
         {
             buttonText.text = isWheelSpinning ? STOP_TEXT : START_TEXT;
+        }
+        if (isWheelSpinning)
+        {
+            audioSource.Play();
+        }
+        else
+        {
+            audioSource.Stop();
         }
     }
 }

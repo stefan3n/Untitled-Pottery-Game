@@ -40,6 +40,8 @@ public sealed class Potter : MonoBehaviour
 
     private Texture2D paintTexture;
     private Texture2D paintTextureInside;
+    
+    public string PaintTextureProperty => paintTextureProperty;
 
     private MeshRenderer meshRenderer;
     private MeshFilter meshFilter;
@@ -111,8 +113,8 @@ public sealed class Potter : MonoBehaviour
     private void ApplyTexturesToMaterials()
     {
         var mats = meshRenderer.materials;
-        if (mats.Length > 0 && mats[0] != null) mats[0].SetTexture(paintTextureProperty, paintTexture);
-        if (mats.Length > 1 && mats[1] != null) mats[1].SetTexture(paintTextureProperty, paintTextureInside);
+        if (mats.Length > 0 && mats[0]) mats[0].SetTexture(paintTextureProperty, paintTexture);
+        if (mats.Length > 1 && mats[1]) mats[1].SetTexture(paintTextureProperty, paintTextureInside);
         meshRenderer.materials = mats;
     }
 
@@ -182,7 +184,7 @@ public sealed class Potter : MonoBehaviour
     
     private void ResizeAndClear(Texture2D tex, int newHeight)
     {
-        if (tex == null) return;
+        if (!tex) return;
         
         if (tex.height != newHeight)
         {
@@ -215,39 +217,42 @@ public sealed class Potter : MonoBehaviour
             body = null;
             GenerateMesh();
         }
+
+        void CopyToPotTexture(Texture2D source, ref Texture2D dest)
+        {
+            if (!source)
+            {
+                return; 
+            }
+
+            if (!dest) dest = CreatePaintTexture();
+
+            if (dest.width != source.width || dest.height != source.height)
+            {
+                dest.Reinitialize(source.width, source.height);
+            }
+
+            if (source.isReadable)
+            {
+                dest.SetPixels(source.GetPixels());
+                dest.Apply();
+            }
+            else
+            {
+                try { Graphics.CopyTexture(source, dest); } catch { }
+            }
+        }
+
+        CopyToPotTexture(newTexOut, ref paintTexture);
+        CopyToPotTexture(newTexIn, ref paintTextureInside);
+
+        ApplyTexturesToMaterials();
         
-        if (newTexOut)
+        if (meshCollider) 
         {
-            if (paintTexture) paintTexture = CreatePaintTexture();
-
-            if (paintTexture.width != newTexOut.width || paintTexture.height != newTexOut.height)
-            {
-                paintTexture.Reinitialize(newTexOut.width, newTexOut.height);
-            }
-
-            Graphics.CopyTexture(newTexOut, paintTexture);
+            meshCollider.sharedMesh = null; 
+            meshCollider.sharedMesh = mesh;
         }
-        else
-        {
-            ClearTexture(paintTexture, Color.clear);
-        }
-
-        if (newTexIn)
-        {
-            if (!paintTextureInside) paintTextureInside = CreatePaintTexture();
-
-            if (paintTextureInside.width != newTexIn.width || paintTextureInside.height != newTexIn.height)
-            {
-                paintTextureInside.Reinitialize(newTexIn.width, newTexIn.height);
-            }
-
-            Graphics.CopyTexture(newTexIn, paintTextureInside);
-        }
-        else
-        {
-            ClearTexture(paintTextureInside, Color.clear);
-        }
-
     }
 
     public void ResetPot()
@@ -277,8 +282,6 @@ public sealed class Potter : MonoBehaviour
         isModified = true;
         GenerateMesh();
     }
-
-    // --- MESH GENERATION (FIXED COLLIDER) ---
 
     void Update()
     {

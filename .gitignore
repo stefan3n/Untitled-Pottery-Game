@@ -1,3 +1,4 @@
+project_BackUpThisFolder_ButDontShipItWithYourGame*
 test_BackUpThisFolder_ButDontShipItWithYourGame*
 Assets/_Recovery/0.unity
 Assets/_Recovery/0.unity.meta
@@ -23,10 +24,6 @@ ex2_BackUpThisFolder_ButDontShipItWithYourGame/
 
 # Unity3D generated file on crash reports
 sysinfo.txt
-
-# Builds
-*.apk
-*.unitypackage
 
 # Crashlytics generated file
 crashlytics-build.properties

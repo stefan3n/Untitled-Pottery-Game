@@ -1,43 +1,47 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class TargetManager : MonoBehaviour
 {
-    [Header("Setup")]
+    [Header("Setup References")]
     public Potter playerPot;
     public Potter targetPotDisplay;
 
     [Header("UI")]
-    public GameObject resultPanel; // Canvas-ul cu text
-    public TextMeshProUGUI resultText; // Textul
+    public GameObject resultPanel;
+    public TextMeshProUGUI resultText;
 
-    [Header("Level Data")]
-    public LevelData currentLevel;
+    [Header("Game Progression")]
+    public List<LevelData> gameLevels; 
+    public string menuSceneName = "MenuScene"; 
+    [Range(0.1f, 1.0f)] public float passingAccuracy = 0.75f; 
 
     [Header("Input")]
-    [Tooltip("Butonul de pe controller pentru a da Restart la final (ex: Trigger sau A)")]
-    public InputActionProperty restartAction;
+    public InputActionProperty actionButton;
 
-    [Header("Difficulty Settings")]
-    [Tooltip("90% => 100% score")]
-    [Range(0.8f, 1.0f)]
-    public float completionThreshold = 0.90f;
+    [Header("Difficulty Settings (Algorithm)")]
+    [Tooltip("Cât poți greși (în metri) fără penalizare. 0.04 = 4cm toleranță.")]
+    public float toleranceMargin = 0.04f;
 
-    // Raza default a vasului 
-    private const float DEFAULT_START_RADIUS = 0.3f;
+    [Tooltip("Eroarea medie la care scorul devine 0. 0.15 = 15cm eroare medie.")]
+    public float maxAcceptableAvgError = 0.15f;
 
-    // Stare interna: false = jucam, true = vedem rezultatul
+    // State
+    private int currentLevelIndex = 0;
     private bool isShowingResult = false;
+    private bool hasPassedCurrentLevel = false;
 
     private void OnEnable()
     {
-        if (restartAction.action != null) restartAction.action.Enable();
+        if (actionButton.action != null) actionButton.action.Enable();
     }
 
     private void OnDisable()
     {
-        if (restartAction.action != null) restartAction.action.Disable();
+        if (actionButton.action != null) actionButton.action.Disable();
     }
 
     private void Start()
@@ -51,117 +55,145 @@ public class TargetManager : MonoBehaviour
 
         if (resultPanel != null) resultPanel.SetActive(false);
 
-        if (currentLevel != null)
-        {
-            LoadLevel(currentLevel);
-        }
+        StartLevel(0);
     }
 
-    public void LoadLevel(LevelData level)
+    private void StartLevel(int index)
     {
-        currentLevel = level;
+        if (gameLevels == null || gameLevels.Count == 0) return;
 
+        currentLevelIndex = index;
+        isShowingResult = false;
+        hasPassedCurrentLevel = false;
+        if (resultPanel) resultPanel.SetActive(false);
+
+        if (playerPot) playerPot.FullReset();
+
+        LoadTargetPotData(gameLevels[index]);
+
+        Debug.Log($"START LEVEL {index + 1}: {gameLevels[index].levelName}");
+    }
+
+    private void LoadTargetPotData(LevelData level)
+    {
         if (targetPotDisplay == null) return;
 
-        float[] heights = targetPotDisplay.GetHeightsData();
+        float[] heights = level.targetHeights;
 
         if (heights == null || heights.Length != level.targetRadii.Length)
         {
             heights = new float[level.targetRadii.Length];
             for (int i = 0; i < heights.Length; i++)
-            {
                 heights[i] = i * targetPotDisplay.baseRingHeight;
-            }
         }
 
-        // Incarcam datele (false la final pentru geometry lock)
-        targetPotDisplay.LoadPotData(level.targetRadii, heights, null, null, false);
+        targetPotDisplay.LoadPotData(level.targetRadii, heights, null, null, true);
     }
+
 
     public void EvaluateAndShowResult()
     {
-        if (isShowingResult) return;
+        if (isShowingResult) return; 
 
         float accuracy = CalculateAccuracy();
+        hasPassedCurrentLevel = accuracy >= passingAccuracy;
 
         if (resultPanel != null && resultText != null)
         {
             resultPanel.SetActive(true);
-            resultText.text = $"Accuracy: {(accuracy * 100):F0}%\n<size=70%>- press Trigger/A to restart -</size>";
+
+            string color = hasPassedCurrentLevel ? "green" : "red";
+            string status = hasPassedCurrentLevel ? "LEVEL PASSED!" : "TRY AGAIN";
+            string instruction = hasPassedCurrentLevel ? "Press Trigger for Next Level" : "Press Trigger to Restart";
+
+            if (hasPassedCurrentLevel && currentLevelIndex >= gameLevels.Count - 1)
+            {
+                status = "GAME COMPLETED!";
+                instruction = "Press Trigger for Menu";
+            }
+
+            resultText.text = $"Accuracy: {(accuracy * 100):F0}%\n" +
+                              $"<color={color}>{status}</color>\n" +
+                              $"<size=60%>{instruction}</size>";
         }
 
         isShowingResult = true;
-        Debug.Log($"Evaluation finished. Accuracy: {accuracy}");
     }
 
-    public void RestartGame()
-    {
-        if (resultPanel != null) resultPanel.SetActive(false);
-
-        // --- FIX AICI: Am inlocuit FullReset() cu ResetPot() ---
-        if (playerPot != null) playerPot.ResetPot();
-
-        isShowingResult = false;
-        Debug.Log("Game restarted.");
-    }
 
     public float CalculateAccuracy()
     {
-        if (playerPot == null || currentLevel == null) return 0f;
+        if (playerPot == null || gameLevels.Count == 0) return 0f;
 
+        float[] targetRadii = gameLevels[currentLevelIndex].targetRadii;
         float[] playerRadii = playerPot.ringsRadius;
-        float[] targetRadii = currentLevel.targetRadii;
 
         int minLength = Mathf.Min(playerRadii.Length, targetRadii.Length);
         int maxLength = Mathf.Max(playerRadii.Length, targetRadii.Length);
 
-        float totalInitialDiff = 0f;
-        float totalCurrentDiff = 0f;
+        float totalError = 0f;
 
         for (int i = 0; i < minLength; i++)
         {
-            float targetR = targetRadii[i];
-            float playerR = playerRadii[i];
+            float diff = Mathf.Abs(playerRadii[i] - targetRadii[i]);
 
-            totalInitialDiff += Mathf.Abs(DEFAULT_START_RADIUS - targetR);
-            totalCurrentDiff += Mathf.Abs(playerR - targetR);
+            float adjustedDiff = Mathf.Max(0f, diff - toleranceMargin);
+
+            totalError += adjustedDiff;
         }
 
         if (maxLength > minLength)
         {
-            float penaltyPerRing = 0.1f;
-            totalCurrentDiff += (maxLength - minLength) * penaltyPerRing;
+            int extraRings = maxLength - minLength;
+            totalError += extraRings * 0.01f;
         }
 
-        if (totalInitialDiff < 0.001f) totalInitialDiff = 1f;
+        float avgError = totalError / maxLength;
 
-        float errorRatio = totalCurrentDiff / totalInitialDiff;
-        float score = 1.0f - errorRatio;
+        float score = 1.0f - (avgError / maxAcceptableAvgError);
 
-        score = Mathf.Clamp01(score);
-
-        if (score >= completionThreshold)
-        {
-            return 1.0f;
-        }
-
-        return score;
+        return Mathf.Clamp01(score);
     }
+
 
     private void Update()
     {
         if (isShowingResult)
         {
-            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)
-            {
-                RestartGame();
-                return;
-            }
+            bool inputDetected = false;
 
-            if (restartAction.action != null && restartAction.action.WasPressedThisFrame())
+     
+            if (actionButton.action != null && actionButton.action.WasPressedThisFrame()) inputDetected = true;
+ 
+            if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) inputDetected = true;
+
+            if (inputDetected)
             {
-                RestartGame();
+                HandlePostGameInput();
             }
+        }
+    }
+
+    private void HandlePostGameInput()
+    {
+        if (hasPassedCurrentLevel)
+        {
+            int nextIndex = currentLevelIndex + 1;
+
+            if (nextIndex < gameLevels.Count)
+            {
+                StartLevel(nextIndex);
+            }
+            else
+            {
+                Debug.Log("Joc terminat! Încărcare meniu...");
+                SceneManager.LoadScene(menuSceneName);
+            }
+        }
+        else
+        {
+            Debug.Log("Restart Level...");
+            StartLevel(currentLevelIndex);
         }
     }
 }

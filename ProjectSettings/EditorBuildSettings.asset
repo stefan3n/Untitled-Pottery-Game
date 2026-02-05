@@ -17,13 +17,13 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Progress1.unity
     guid: 7adabd30a39ea0112abd56fae01f1126
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/1 Start Scene.unity
     guid: b021b6180daa73947bdfcc804cc4fe44
   - enabled: 1
     path: Assets/ExploreMode.unity
     guid: 168f69872ac43da41b37b5730cf551ce
-  - enabled: 0
+  - enabled: 1
     path: Assets/JourneyMode.unity
     guid: 3b5cdb8705866be4cbf01cf9c886bece
   m_configObjects:

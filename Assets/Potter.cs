@@ -200,7 +200,7 @@ public sealed class Potter : MonoBehaviour
         Color[] pixels = paintTexture.GetPixels();
         for (int i = 0; i < pixels.Length; i += 20)
         {
-            if (pixels[i].a > 0.05f) return true; // Daca gasim ceva opac, e pictat
+            if (pixels[i].a > 0.05f) return true; 
         }
         return false;
     }
@@ -418,7 +418,7 @@ public sealed class Potter : MonoBehaviour
         {
             meshCollider.sharedMesh = null;
             meshCollider.sharedMesh = mesh;
-            meshCollider.convex = false; // Important pentru Raycast corect
+            meshCollider.convex = false; 
             Physics.SyncTransforms();
         }
     }

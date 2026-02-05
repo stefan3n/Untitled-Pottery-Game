@@ -4,7 +4,6 @@ public class ShelfPot : MonoBehaviour
 {
     public int ShelfSlotIndex { get; private set; }
 
-    // Datele salvate
     private float[] savedRadii;
     private float[] savedHeights;
     private Texture2D savedTextureOutside;
@@ -15,8 +14,6 @@ public class ShelfPot : MonoBehaviour
     private Renderer[] renderers;
     private Material[] originalMaterials;
 
-    // --- SCHIMBARE: Variabila Publica pentru Material ---
-    // Vom atribui materialul in Inspector pe Prefab, nu il mai cream in cod
     [Header("Visuals")]
     public Material highlightMaterial;
 
@@ -41,21 +38,17 @@ public class ShelfPot : MonoBehaviour
     {
         if (renderers == null) return;
 
-        // Daca ai uitat sa pui materialul in inspector, iesim ca sa nu dea eroare
         if (highlightMaterial == null) return;
 
         foreach (var rend in renderers)
         {
             if (active)
             {
-                // Daca deja e highlight, nu facem nimic
                 if (rend.sharedMaterial == highlightMaterial) continue;
 
-                // Salvam materialele originale
                 if (originalMaterials == null || originalMaterials.Length == 0)
                     originalMaterials = rend.sharedMaterials;
 
-                // Aplicam highlight
                 Material[] glowMats = new Material[rend.sharedMaterials.Length];
                 for (int i = 0; i < glowMats.Length; i++) glowMats[i] = highlightMaterial;
 
@@ -63,7 +56,6 @@ public class ShelfPot : MonoBehaviour
             }
             else
             {
-                // Restauram materialele originale
                 if (originalMaterials != null && originalMaterials.Length > 0)
                 {
                     rend.sharedMaterials = originalMaterials;

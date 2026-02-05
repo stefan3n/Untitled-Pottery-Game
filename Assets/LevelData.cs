@@ -4,8 +4,10 @@ using UnityEngine;
 public class LevelData : ScriptableObject
 {
     public string levelName = "Vaza Simpla";
-    [Range(0.1f, 1.0f)]
-    public float[] targetRadii; // Aici stocam forma tintei
 
-    public float accuracyThreshold = 0.90f; // Precizie necesara
+    [Header("Data")]
+    public float[] targetRadii;   
+    public float[] targetHeights; 
+
+    public float accuracyThreshold = 0.90f;
 }

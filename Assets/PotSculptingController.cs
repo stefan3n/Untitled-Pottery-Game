@@ -83,13 +83,10 @@ public sealed class PotSculptingController : MonoBehaviour
 
         Vector3 rightParams = rightHandVisual ? rightHandVisual.position : rightControllerTransform.position;
 
-        // Logica de vizualizare (Hover)
         HandleHandHover(rightParams, rightTriggerPressed);
 
-        // Logica de sculptare (modificare raza)
         HandleHandSculpt(rightControllerTransform, rightParams, rightTriggerPressed, isRightHandInsidePot);
 
-        // Logica de inaltare (Pull)
         HandleTwoHandPull();
     }
 
@@ -166,13 +163,11 @@ public sealed class PotSculptingController : MonoBehaviour
             return;
         }
 
-        // --- MODIFICARE 1: Daca geometria e blocata, ascundem selectorul ---
         if (pottery.IsGeometryLocked)
         {
             HideSelector();
             return;
         }
-        // -------------------------------------------------------------------
 
         Vector3 local = pottery.transform.InverseTransformPoint(handPosition);
 
@@ -202,9 +197,7 @@ public sealed class PotSculptingController : MonoBehaviour
     {
         if (!pottery) return;
 
-        // --- MODIFICARE 2: Blocare Sculptare ---
         if (pottery.IsGeometryLocked) return;
-        // ---------------------------------------
 
         if (!rotatePot || !rotatePot.IsRotating()) return;
         if (!isTriggerPressed) return;
@@ -277,18 +270,15 @@ public sealed class PotSculptingController : MonoBehaviour
     {
         if (!pottery) return;
 
-        // --- MODIFICARE 3: Blocare Pulling (Inaltare) ---
         if (pottery.IsGeometryLocked)
         {
             isPulling = false;
             return;
         }
-        // ------------------------------------------------
 
         if (pottery.ringHeights == null || pottery.ringsCount < 2)
             return;
 
-        // if (!leftTriggerPressed || !rightTriggerPressed)
         if (!rightTriggerPressed)
         {
             isPulling = false;

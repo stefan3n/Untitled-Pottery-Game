@@ -88,7 +88,14 @@ public sealed class PotWorkflowController : MonoBehaviour
     {
         if (shelfManager != null && pottery != null)
         {
+            PrintPotDataForCode();
             shelfManager.SavePotToShelf(pottery);
+
+            if (notificationManager)
+            {
+                notificationManager.ShowNotification("Pot Saved!");
+            }
+
         }
     }
 
@@ -103,19 +110,17 @@ public sealed class PotWorkflowController : MonoBehaviour
         }
         wasSavePressed = isSaveDown;
 
-
-        bool isGripPressedVR = false;
+        bool isRightGripPressed = false;
 
         InputDevices.GetDevicesAtXRNode(XRNode.RightHand, inputDevices);
 
         if (inputDevices.Count > 0)
         {
             UnityEngine.XR.InputDevice rightController = inputDevices[0];
-
-            rightController.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out isGripPressedVR);
+            rightController.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out isRightGripPressed);
         }
 
-        bool isLoadDown = isGripPressedVR || (Keyboard.current != null && Keyboard.current.mKey.isPressed);
+        bool isLoadDown = isRightGripPressed || (Keyboard.current != null && Keyboard.current.mKey.isPressed);
 
         if (isLoadDown && !wasLoadPressed)
         {
@@ -126,14 +131,52 @@ public sealed class PotWorkflowController : MonoBehaviour
         }
         wasLoadPressed = isLoadDown;
 
-        float submitVal = submitAction.action?.ReadValue<float>() ?? 0f;
-        bool isSubmitDown = submitVal > 0.5f || (Keyboard.current != null && Keyboard.current.enterKey.isPressed);
+        bool isLeftGripPressed = false;
+
+        InputDevices.GetDevicesAtXRNode(XRNode.LeftHand, inputDevices);
+
+        if (inputDevices.Count > 0)
+        {
+            UnityEngine.XR.InputDevice leftController = inputDevices[0];
+            leftController.TryGetFeatureValue(UnityEngine.XR.CommonUsages.gripButton, out isLeftGripPressed);
+        }
+
+        bool isSubmitDown = isLeftGripPressed || (Keyboard.current != null && Keyboard.current.enterKey.isPressed);
 
         if (isSubmitDown && !wasSubmitPressed)
         {
             if (targetManager) targetManager.EvaluateAndShowResult();
         }
         wasSubmitPressed = isSubmitDown;
+    }
+
+    private void PrintPotDataForCode()
+    {
+        if (pottery == null) return;
+
+        float[] radii = pottery.GetRadiiData();
+        float[] heights = pottery.GetHeightsData();
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("<b>[POT DATA - COPY BELOW]</b>");
+
+        sb.Append("float[] targetRadii = new float[] { ");
+        for (int i = 0; i < radii.Length; i++)
+        {
+            sb.Append(radii[i].ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + "f");
+            if (i < radii.Length - 1) sb.Append(", ");
+        }
+        sb.AppendLine(" };");
+
+        sb.Append("float[] targetHeights = new float[] { ");
+        for (int i = 0; i < heights.Length; i++)
+        {
+            sb.Append(heights[i].ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + "f");
+            if (i < heights.Length - 1) sb.Append(", ");
+        }
+        sb.AppendLine(" };");
+
+        Debug.Log(sb.ToString());
     }
 
     private void LoadPotFromShelf(ShelfPot shelfPot)

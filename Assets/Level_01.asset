@@ -14,7 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   levelName: Vaza Simpla
   targetRadii:
-  - 0.63
-  - 0.58
-  - 0.5
+  - 0.1951
+  - 0.229
+  - 0.281
+  - 0.3372
+  - 0.3475
+  - 0.3037
+  - 0.2316
+  - 0.194
+  targetHeights:
+  - 0
+  - 0.05
+  - 0.1
+  - 0.15
+  - 0.2117
+  - 0.2617
+  - 0.3117
+  - 0.3743
   accuracyThreshold: 0.9

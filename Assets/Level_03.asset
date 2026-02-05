@@ -10,25 +10,33 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8977908d2fa9be45ac69ad7ba3c75c8, type: 3}
-  m_Name: Level_02
+  m_Name: Level_03
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   levelName: Vaza Simpla
   targetRadii:
-  - 0.226
-  - 0.1554
+  - 0.2243
+  - 0.1586
+  - 0.0942
+  - 0.0668
+  - 0.092
+  - 0.1157
+  - 0.1358
+  - 0.116
   - 0.0835
-  - 0.05
-  - 0.0571
-  - 0.1144
-  - 0.1842
-  - 0.2404
+  - 0.0605
+  - 0.0886
+  - 0.1547
   targetHeights:
   - 0
   - 0.05
   - 0.1
-  - 0.15
-  - 0.2
-  - 0.25
-  - 0.3759
-  - 0.4259
+  - 0.2017
+  - 0.303
+  - 0.3783
+  - 0.4536
+  - 0.5286
+  - 0.5786
+  - 0.6286
+  - 0.6786
+  - 0.7286
   accuracyThreshold: 0.9

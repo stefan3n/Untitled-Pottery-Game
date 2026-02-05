@@ -2,15 +2,12 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Collider))]
-public class PaintBrush : MonoBehaviour
-{
-    public enum BrushMode
-    {
+public class PaintBrush : MonoBehaviour{
+    public enum BrushMode {
         Normal,
         Erase,
         Spray,
-        Bucket
-    }
+        Bucket }
 
     [Header("References")]
     [SerializeField] private Potter pottery;
@@ -20,13 +17,13 @@ public class PaintBrush : MonoBehaviour
     [Header("Brush Settings")]
     [SerializeField] private BrushMode currentMode = BrushMode.Normal;
     [SerializeField] private Color brushColor = Color.red;
-    [SerializeField, Range(0.001f, 0.2f)] private float brushRadiusUV = 0.01f;
-    [SerializeField, Range(0.01f, 1f)] private float sprayDensity = 0.1f;
-    [SerializeField] private float raycastDistance = 0.2f;
+    [SerializeField, Range(0.001f,0.2f)] private float brushRadiusUV =0.01f;
+    [SerializeField, Range(0.01f,1f)] private float sprayDensity =0.1f;
+    [SerializeField] private float raycastDistance =0.2f;
 
     [Header("UI Control Limits")]
-    [SerializeField] private float minBrushSize = 0.01f;
-    [SerializeField] private float maxBrushSize = 0.1f;
+    [SerializeField] private float minBrushSize =0.01f;
+    [SerializeField] private float maxBrushSize =0.1f;
 
     [Header("Ray Settings")]
     [SerializeField] private Transform rayOrigin;
@@ -34,15 +31,21 @@ public class PaintBrush : MonoBehaviour
 
     [Header("Input")]
     [SerializeField] private InputActionProperty paintAction;
-    
-    [Header("Shared Material")] 
+
+    [Header("Shared Material")]
     public Material targetMaterial;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource sprayAudioSource;
+    [SerializeField] private AudioClip sprayClip;
+    [SerializeField] private AudioSource bucketAudioSource;
+    [SerializeField] private AudioClip bucketClip;
 
     private Collider col;
     private bool canPaint;
 
-    private float lastBucketPaintTime = 0f;
-    private const float BUCKET_COOLDOWN = 0.2f;
+    private float lastBucketPaintTime =0f;
+    private const float BUCKET_COOLDOWN =0.2f;
 
     private void Awake()
     {
@@ -57,10 +60,22 @@ public class PaintBrush : MonoBehaviour
 
         if (targetMaterial)
         {
-            targetMaterial.color = brushColor; 
+            targetMaterial.color = brushColor;
         }
-        
+
         if (rayOrigin == null) rayOrigin = transform;
+
+        if (sprayAudioSource && sprayClip)
+        {
+            sprayAudioSource.clip = sprayClip;
+            sprayAudioSource.loop = true;
+        }
+
+        if (bucketAudioSource && bucketClip)
+        {
+            bucketAudioSource.clip = bucketClip;
+            bucketAudioSource.loop = false;
+        }
     }
 
     private void OnEnable()
@@ -73,13 +88,16 @@ public class PaintBrush : MonoBehaviour
     {
         if (paintAction.action != null)
             paintAction.action.Disable();
+
+        if (sprayAudioSource && sprayAudioSource.isPlaying)
+            sprayAudioSource.Stop();
     }
 
     private void Update()
     {
-        float val = paintAction.action?.ReadValue<float>() ?? 0f;
-        canPaint = val > 0.5f;
-        
+        float val = paintAction.action?.ReadValue<float>() ??0f;
+        canPaint = val >0.5f;
+
         if (paintParticles)
         {
             if (canPaint && !paintParticles.isPlaying)
@@ -93,6 +111,21 @@ public class PaintBrush : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        bool shouldPlaySpray = canPaint && currentMode == BrushMode.Spray;
+        if (sprayAudioSource)
+        {
+            if (shouldPlaySpray)
+            {
+                if (!sprayAudioSource.isPlaying) sprayAudioSource.Play();
+            }
+            else {
+                if (sprayAudioSource.isPlaying) sprayAudioSource.Stop();
+            }
+        }
+    }
+
     public void SetBrushColor(Color newColor)
     {
         brushColor = newColor;
@@ -101,10 +134,10 @@ public class PaintBrush : MonoBehaviour
             var main = paintParticles.main;
             main.startColor = newColor;
         }
-        
+
         if (targetMaterial)
         {
-            targetMaterial.color = newColor; 
+            targetMaterial.color = newColor;
         }
     }
 
@@ -125,7 +158,7 @@ public class PaintBrush : MonoBehaviour
 
     public void SetBrushMode(int modeIndex)
     {
-        if (modeIndex >= 0 && modeIndex < System.Enum.GetValues(typeof(BrushMode)).Length)
+        if (modeIndex >=0 && modeIndex < System.Enum.GetValues(typeof(BrushMode)).Length)
             currentMode = (BrushMode)modeIndex;
     }
 
@@ -148,18 +181,19 @@ public class PaintBrush : MonoBehaviour
                 {
                     pottery.ClearPaintTexture(brushColor);
                     lastBucketPaintTime = Time.time;
+                    if (bucketAudioSource && bucketClip) bucketAudioSource.Play();
                 }
                 return;
             }
 
-            int submeshIndex = 0;
-            if (hit.collider is MeshCollider && pottery.ringsCount > 0 && pottery.faces > 0)
+            int submeshIndex =0;
+            if (hit.collider is MeshCollider && pottery.ringsCount >0 && pottery.faces >0)
             {
-                int numQuads = (pottery.faces - 1) * (pottery.ringsCount - 1);
-                int trisPerSubmesh = numQuads * 2;
+                int numQuads = (pottery.faces -1) * (pottery.ringsCount -1);
+                int trisPerSubmesh = numQuads *2;
                 if (hit.triangleIndex >= trisPerSubmesh)
                 {
-                    submeshIndex = 1;
+                    submeshIndex =1;
                 }
             }
 
@@ -167,13 +201,13 @@ public class PaintBrush : MonoBehaviour
             if (tex == null) return;
 
             Vector2 pixelUV = hit.textureCoord;
-            
+
             int texW = tex.width;
             int texH = tex.height;
 
             int centerX = (int)(pixelUV.x * texW);
             int centerY = (int)(pixelUV.y * texH);
-            
+
             int radiusPixels = (int)(brushRadiusUV * texW);
             int r2 = radiusPixels * radiusPixels;
 
@@ -181,11 +215,10 @@ public class PaintBrush : MonoBehaviour
 
             Color targetColor = (currentMode == BrushMode.Erase) ? Color.clear : brushColor;
 
-            int xMin = Mathf.Clamp(centerX - radiusPixels, 0, texW - 1);
-            int xMax = Mathf.Clamp(centerX + radiusPixels, 0, texW - 1);
-            int yMin = Mathf.Clamp(centerY - radiusPixels, 0, texH - 1);
-            int yMax = Mathf.Clamp(centerY + radiusPixels, 0, texH - 1);
-
+            int xMin = Mathf.Clamp(centerX - radiusPixels,0, texW -1);
+            int xMax = Mathf.Clamp(centerX + radiusPixels,0, texW -1);
+            int yMin = Mathf.Clamp(centerY - radiusPixels,0, texH -1);
+            int yMax = Mathf.Clamp(centerY + radiusPixels,0, texH -1);
 
             for (int y = yMin; y <= yMax; y++)
             {
@@ -206,14 +239,14 @@ public class PaintBrush : MonoBehaviour
                     }
                 }
             }
-            
-            if (centerX - radiusPixels < 0 || centerX + radiusPixels >= texW)
+
+            if (centerX - radiusPixels <0 || centerX + radiusPixels >= texW)
             {
-                int offset = (centerX < texW / 2) ? texW : -texW;
+                int offset = (centerX < texW /2) ? texW : -texW;
                 int wrappedCenterX = centerX + offset;
-                
-                int wxMin = Mathf.Clamp(wrappedCenterX - radiusPixels, 0, texW - 1);
-                int wxMax = Mathf.Clamp(wrappedCenterX + radiusPixels, 0, texW - 1);
+
+                int wxMin = Mathf.Clamp(wrappedCenterX - radiusPixels,0, texW -1);
+                int wxMax = Mathf.Clamp(wrappedCenterX + radiusPixels,0, texW -1);
 
                 for (int y = yMin; y <= yMax; y++)
                 {

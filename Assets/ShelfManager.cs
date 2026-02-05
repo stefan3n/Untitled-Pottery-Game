@@ -7,10 +7,10 @@ public class ShelfManager : MonoBehaviour
     public GameObject potPrefab;
 
     [Header("Visuals")]
-    public Material globalHighlightMaterial; // Materialul albastru transparent pentru highlight
+    public Material globalHighlightMaterial;
 
     [Header("UI Feedback")]
-    public NotificationManager notificationManager; // Referinta pentru notificari text
+    public NotificationManager notificationManager;
 
     [Header("Appearance")]
     [Range(0.1f, 2.0f)]
@@ -32,30 +32,33 @@ public class ShelfManager : MonoBehaviour
         }
     }
 
-    // Functie helper pentru a copia textura curat (fara bug-uri pe Quest)
     private Texture2D DuplicateTexture(Texture2D source)
     {
         if (source == null) return null;
 
-        // Cream o textura noua goala cu aceleasi setari
         Texture2D newTex = new Texture2D(source.width, source.height, source.format, false);
-
-        // Copiem pixelii direct pe GPU
-        Graphics.CopyTexture(source, newTex);
-
+        
+        if (source.isReadable)
+        {
+            newTex.SetPixels(source.GetPixels());
+            newTex.Apply(); 
+        }
+        else
+        {
+            try { Graphics.CopyTexture(source, newTex); } catch {}
+        }
+        
         return newTex;
     }
-
+    
     public void SavePotToShelf(Potter activePot)
     {
-        // 1. Validari
-        if (potPrefab == null || activePot == null)
+        if (!potPrefab || !activePot)
         {
             Debug.LogError("ShelfManager: Pot Prefab or Active Pot missing!");
             return;
         }
 
-        // 2. Gasim slot liber
         int freeIndex = -1;
         for (int i = 0; i < isSlotOccupied.Length; i++)
         {
@@ -73,88 +76,80 @@ public class ShelfManager : MonoBehaviour
             return;
         }
 
-        // 3. Extragem datele geometrice
         float[] radiiData = activePot.GetRadiiData();
         float[] heightsData = activePot.GetHeightsData();
         bool isPainted = activePot.CheckIfPainted();
 
-        // --- PRELUAM MATERIALUL SURSA (Fix pentru Culoarea Clay) ---
-        // Luam materialul exact de pe vasul de pe masa ca sa pastram culoarea si proprietatile
         Material sourceMaterial = null;
         Renderer activeRenderer = activePot.GetComponent<Renderer>();
-        if (activeRenderer != null)
+        if (activeRenderer)
         {
             sourceMaterial = activeRenderer.sharedMaterial;
         }
-        // ----------------------------------------------------------
-
-        // --- COPIEM TEXTURILE (Fix pentru Textura Neagra pe Quest) ---
+        
         Texture2D originalTexOut = activePot.GetPaintTexture(0);
         Texture2D originalTexIn = activePot.GetPaintTexture(1);
         Texture2D texOutCopy = DuplicateTexture(originalTexOut);
         Texture2D texInCopy = DuplicateTexture(originalTexIn);
-        // -------------------------------------------------------------
-
-        // 4. Cream obiectul vizual pe raft
+        
         GameObject newPotObj = Instantiate(potPrefab, shelfSlots[freeIndex].position, shelfSlots[freeIndex].rotation);
         newPotObj.transform.SetParent(shelfSlots[freeIndex]);
         newPotObj.transform.localScale = Vector3.one * savedPotScale;
         newPotObj.name = $"SavedPot_Slot_{freeIndex}";
+        
+        string paintPropName = activePot.PaintTextureProperty; 
+        if (string.IsNullOrEmpty(paintPropName)) paintPropName = "_PaintTex";
 
-        // Setam Layer-ul corect pentru Raycast
         newPotObj.layer = LayerMask.NameToLayer("PotLayer");
         foreach (Transform child in newPotObj.transform) child.gameObject.layer = LayerMask.NameToLayer("PotLayer");
-
-        // --- APLICARE MATERIAL CLONAT PE RAFT ---
-        // Aici ne asiguram ca vasul de pe raft arata IDENTIC cu cel de pe masa (Clay + Pictura)
+        
         Renderer[] rends = newPotObj.GetComponentsInChildren<Renderer>();
         foreach (var r in rends)
         {
-            if (sourceMaterial != null)
+            if (sourceMaterial)
             {
-                // 1. Cream o COPIE a materialului de pe masa (deci va fi Clay)
                 Material newMat = new Material(sourceMaterial);
 
-                // 2. Ii aplicam textura noua pictata
-                if (texOutCopy != null)
+                if (sourceMaterial.HasProperty("_Color")) newMat.SetColor("_Color", sourceMaterial.GetColor("_Color"));
+                if (sourceMaterial.HasProperty("_BaseColor")) newMat.SetColor("_BaseColor", sourceMaterial.GetColor("_BaseColor"));
+
+                if (texOutCopy && newMat.HasProperty(paintPropName))
                 {
-                    newMat.mainTexture = texOutCopy;
-                    // Suport pentru URP/HDRP daca e cazul
-                    if (newMat.HasProperty("_BaseMap")) newMat.SetTexture("_BaseMap", texOutCopy);
+                    newMat.SetTexture(paintPropName, texOutCopy);
                 }
 
-                // 3. Atribuim acest material nou vasului de pe raft
-                r.material = newMat;
+                if (r.sharedMaterials.Length > 1 && texInCopy)
+                {
+                    Material matIn = new Material(newMat);
+                    if (matIn.HasProperty(paintPropName)) matIn.SetTexture(paintPropName, texInCopy);
+                    r.materials = new Material[] { newMat, matIn };
+                }
+                else
+                {
+                    r.material = newMat;
+                }
             }
         }
-        // ----------------------------------------
-
-        // 5. Initializam scriptul raftului (si adaugam componenta daca lipseste)
+        
         ShelfPot shelfPotScript = newPotObj.GetComponent<ShelfPot>();
-        if (shelfPotScript == null) shelfPotScript = newPotObj.AddComponent<ShelfPot>();
+        if (!shelfPotScript) shelfPotScript = newPotObj.AddComponent<ShelfPot>();
 
-        // Ii dam materialul de highlight pentru interactiune
         shelfPotScript.highlightMaterial = globalHighlightMaterial;
 
-        // Initializam datele
         shelfPotScript.Initialize(freeIndex, radiiData, heightsData, texOutCopy, texInCopy, isPainted);
 
-        // 6. Configuram vizualul geometric (Potter script pe raft e doar vizual, static)
         Potter newPotterScript = newPotObj.GetComponent<Potter>();
-        if (newPotterScript != null)
+        if (newPotterScript)
         {
             newPotterScript.isStatic = true;
-            // Incarcam datele geometrice. Textura e deja pusa pe material mai sus, dar o pasam si aici pt consistenta
+            
             newPotterScript.LoadPotData(radiiData, heightsData, texOutCopy, texInCopy, false);
         }
 
-        // 7. Finalizare
         isSlotOccupied[freeIndex] = true;
 
-        // Resetam vasul de pe masa
-        activePot.ResetPot();
+        activePot.FullReset();
 
-        // --- NOTIFICARE UI ---
         if (notificationManager != null)
             notificationManager.ShowNotification("Pot Saved!");
 

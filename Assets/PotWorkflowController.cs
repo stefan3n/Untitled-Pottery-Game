@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using UnityEngine.XR;
 
 public sealed class PotWorkflowController : MonoBehaviour
@@ -9,7 +10,12 @@ public sealed class PotWorkflowController : MonoBehaviour
     [SerializeField] private Potter pottery;
     [SerializeField] private ShelfManager shelfManager;
     [SerializeField] private TargetManager targetManager;
+    [SerializeField] private PaintBrush paintTip;
+    [SerializeField] private Button buttonPaint;
+    [SerializeField] private GameObject canvasPaint;
+    [SerializeField] private GameObject paintBrush;
 
+    
     [Header("UI Feedback")]
     public NotificationManager notificationManager;
 
@@ -113,7 +119,7 @@ public sealed class PotWorkflowController : MonoBehaviour
 
         if (isLoadDown && !wasLoadPressed)
         {
-            if (currentHoveredShelfPot != null)
+            if (currentHoveredShelfPot)
             {
                 LoadPotFromShelf(currentHoveredShelfPot);
             }
@@ -147,9 +153,15 @@ public sealed class PotWorkflowController : MonoBehaviour
         Destroy(shelfPot.gameObject);
         currentHoveredShelfPot = null;
 
-        if (notificationManager != null)
+        if (notificationManager)
         {
             notificationManager.ShowNotification("Pot Loaded!");
         }
+
+        canvasPaint.SetActive(true);
+        buttonPaint.gameObject.SetActive(false);
+        paintBrush.SetActive(true);
+        paintTip.gameObject.SetActive(true);
+        // pottery.SetPaintTexture();
     }
 }
